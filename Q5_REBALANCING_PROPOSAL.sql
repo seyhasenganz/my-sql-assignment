@@ -1,133 +1,165 @@
 -- ===================================
 -- QUESTION 5: REBALANCING PROPOSAL
 -- ===================================
--- Based on REAL Q1-Q4 analysis
--- Recommend portfolio allocation changes
+-- Based on REAL Q4 Sharpe Ratio Analysis from Database
+-- All holdings have POSITIVE Sharpe ratios
 
 USE invest_portfolio;
 
 -- ===================================
--- Current vs Proposed Allocation
+-- REAL Sharpe Ratios from Q4 Analysis:
+-- IXN:  2.0104 (STRONG BUY - Excellent risk-adjusted return)
+-- QQQ:  1.7589 (STRONG BUY - Excellent risk-adjusted return)
+-- GLD:  0.8499 (STRONG BUY - Good risk-adjusted return)
+-- VNQ:  0.8217 (STRONG BUY - Good risk-adjusted return)
+-- IEF:  0.3105 (HOLD - Acceptable but lowest performer)
 -- ===================================
--- REAL Sharpe Ratios from Q4 analysis:
--- IXN:  1.14 (Strong Buy - keep)
--- QQQ:  0.94 (Buy - keep)
--- GLD: -0.08 (SELL - too much volatility, negative Sharpe)
--- VNQ:  0.57 (Buy - increase)
--- IEF: -0.37 (SELL - bonds underperforming)
 
 SELECT
-    ticker,
-    portfolio_weight as current_allocation_pct,
+    h.ticker,
+    h.portfolio_weight as current_allocation_pct,
 
-    -- Proposed allocation based on Sharpe ratios
+    -- Proposed allocation based on REAL Sharpe ratios
     CASE
-        WHEN ticker = 'IXN' THEN 20.0    -- Increase from 17.5% (Strong Buy)
-        WHEN ticker = 'QQQ' THEN 25.0    -- Increase from 22.1% (Buy)
-        WHEN ticker = 'GLD' THEN 15.0    -- REDUCE from 23.0% (Sell - negative Sharpe)
-        WHEN ticker = 'VNQ' THEN 25.0    -- INCREASE from 8.9% (Buy)
-        WHEN ticker = 'IEF' THEN 15.0    -- REDUCE from 28.5% (Sell - negative Sharpe)
+        WHEN h.ticker = 'IXN' THEN 20.0    -- Increase from 17.5% (Sharpe 2.01 - Best!)
+        WHEN h.ticker = 'QQQ' THEN 25.0    -- Increase from 22.1% (Sharpe 1.76 - Excellent)
+        WHEN h.ticker = 'GLD' THEN 22.0    -- Hold/Slight reduce from 23.0% (Sharpe 0.85)
+        WHEN h.ticker = 'VNQ' THEN 18.0    -- Increase from 8.9% (Sharpe 0.82 - Good, but underweighted)
+        WHEN h.ticker = 'IEF' THEN 15.0    -- Reduce from 28.5% (Sharpe 0.31 - Lowest performer)
     END as proposed_allocation_pct,
 
     -- Calculate dollar amount of trades needed
     CASE
-        WHEN ticker = 'IXN' THEN ROUND((20.0 - portfolio_weight) * 95 / 100, 1)
-        WHEN ticker = 'QQQ' THEN ROUND((25.0 - portfolio_weight) * 95 / 100, 1)
-        WHEN ticker = 'GLD' THEN ROUND((15.0 - portfolio_weight) * 95 / 100, 1)
-        WHEN ticker = 'VNQ' THEN ROUND((25.0 - portfolio_weight) * 95 / 100, 1)
-        WHEN ticker = 'IEF' THEN ROUND((15.0 - portfolio_weight) * 95 / 100, 1)
+        WHEN h.ticker = 'IXN' THEN ROUND((20.0 - h.portfolio_weight) * 95 / 100, 1)
+        WHEN h.ticker = 'QQQ' THEN ROUND((25.0 - h.portfolio_weight) * 95 / 100, 1)
+        WHEN h.ticker = 'GLD' THEN ROUND((22.0 - h.portfolio_weight) * 95 / 100, 1)
+        WHEN h.ticker = 'VNQ' THEN ROUND((18.0 - h.portfolio_weight) * 95 / 100, 1)
+        WHEN h.ticker = 'IEF' THEN ROUND((15.0 - h.portfolio_weight) * 95 / 100, 1)
     END as trade_amount_millions,
 
     -- Action to take
     CASE
-        WHEN ticker = 'IXN' AND portfolio_weight < 20.0 THEN 'BUY $2.4M'
-        WHEN ticker = 'QQQ' AND portfolio_weight < 25.0 THEN 'BUY $2.9M'
-        WHEN ticker = 'GLD' AND portfolio_weight > 15.0 THEN 'SELL $7.6M'
-        WHEN ticker = 'VNQ' AND portfolio_weight < 25.0 THEN 'BUY $15.3M'
-        WHEN ticker = 'IEF' AND portfolio_weight > 15.0 THEN 'SELL $12.8M'
+        WHEN h.ticker = 'IXN' AND h.portfolio_weight < 20.0 THEN 'BUY $2.4M'
+        WHEN h.ticker = 'QQQ' AND h.portfolio_weight < 25.0 THEN 'BUY $2.9M'
+        WHEN h.ticker = 'GLD' AND h.portfolio_weight > 22.0 THEN 'SELL $0.95M'
+        WHEN h.ticker = 'VNQ' AND h.portfolio_weight < 18.0 THEN 'BUY $8.6M'
+        WHEN h.ticker = 'IEF' AND h.portfolio_weight > 15.0 THEN 'SELL $12.8M'
         ELSE 'HOLD'
     END as action,
 
-    -- Reasoning based on Q4 Sharpe Ratio
+    -- Detailed reasoning based on REAL Sharpe Ratio
     CASE
-        WHEN ticker = 'IXN' THEN 'Sharpe 1.14 - Strong Buy, excellent risk-adjusted return'
-        WHEN ticker = 'QQQ' THEN 'Sharpe 0.94 - Buy, good risk-adjusted return'
-        WHEN ticker = 'GLD' THEN 'Sharpe -0.08 - SELL, negative risk-adjusted return, too volatile'
-        WHEN ticker = 'VNQ' THEN 'Sharpe 0.57 - Buy, increase diversification and income'
-        WHEN ticker = 'IEF' THEN 'Sharpe -0.37 - SELL, bonds underperforming, lowest risk-adjusted return'
+        WHEN h.ticker = 'IXN' THEN 'Sharpe 2.01 - EXCELLENT risk-adjusted return, highest quality holding, increase position'
+        WHEN h.ticker = 'QQQ' THEN 'Sharpe 1.76 - EXCELLENT risk-adjusted return, strong performance, increase position'
+        WHEN h.ticker = 'GLD' THEN 'Sharpe 0.85 - GOOD risk-adjusted return, stable diversifier, maintain position'
+        WHEN h.ticker = 'VNQ' THEN 'Sharpe 0.82 - GOOD risk-adjusted return, income generator, severely underweighted, increase position'
+        WHEN h.ticker = 'IEF' THEN 'Sharpe 0.31 - LOWEST risk-adjusted return among holdings, bonds underperforming, reduce defensive drag'
     END as reason
 
-FROM holdings_dim
-WHERE account_id = 1001
+FROM holdings_dim h
+WHERE h.account_id = 1001
 ORDER BY
     CASE
-        WHEN ticker = 'IXN' THEN 1
-        WHEN ticker = 'QQQ' THEN 2
-        WHEN ticker = 'GLD' THEN 3
-        WHEN ticker = 'VNQ' THEN 4
-        WHEN ticker = 'IEF' THEN 5
+        WHEN h.ticker = 'IXN' THEN 1
+        WHEN h.ticker = 'QQQ' THEN 2
+        WHEN h.ticker = 'GLD' THEN 3
+        WHEN h.ticker = 'VNQ' THEN 4
+        WHEN h.ticker = 'IEF' THEN 5
     END;
 
 -- ===================================
--- EXPLANATION OF REBALANCING
+-- DETAILED REBALANCING ANALYSIS
 -- ===================================
 /*
-REBALANCING RATIONALE (Based on REAL Sharpe Ratios):
+PORTFOLIO REBALANCING BASED ON REAL SHARPE RATIOS:
 
-Current Allocation:
-  IXN: 17.5% (Sharpe 1.14) - Best performer, but underweighted
-  QQQ: 22.1% (Sharpe 0.94) - Good performer, but underweighted
-  GLD: 23.0% (Sharpe -0.08) - WORST performer, overweighted
-  VNQ:  8.9% (Sharpe 0.57) - Good performer, SEVERELY underweighted
-  IEF: 28.5% (Sharpe -0.37) - Second worst, OVERWEIGHTED
+Current Allocation Summary:
+  IXN: 17.5% (Sharpe 2.01)  - Underweighted highest performer
+  QQQ: 22.1% (Sharpe 1.76)  - Underweighted excellent performer
+  GLD: 23.0% (Sharpe 0.85)  - Well-positioned good performer
+  VNQ:  8.9% (Sharpe 0.82)  - SEVERELY underweighted good performer
+  IEF: 28.5% (Sharpe 0.31)  - OVERWEIGHTED lowest performer
 
-Key Changes:
+KEY INSIGHT: ALL HOLDINGS ARE POSITIVE SHARPE RATIOS
+  - No holdings to completely sell
+  - All deserve to remain in portfolio
+  - Rebalancing focuses on OPTIMIZING allocation, not eliminating
 
-1. REDUCE GLD from 23.0% to 15.0% (SELL $7.6M)
-   Reason: Sharpe -0.08 (negative return for risk)
-           Very volatile (33.78%) with only 8.08% return
-           Risk not justified by return
+RECOMMENDED REBALANCING:
 
-2. REDUCE IEF from 28.5% to 15.0% (SELL $12.8M)
-   Reason: Sharpe -0.37 (worst performer)
-           0.21% return in 12M (essentially flat)
-           4.84% volatility not justified
-           Bonds overweighted despite poor Sharpe
+1. INCREASE IXN from 17.5% to 20.0% (BUY $2.4M)
+   Rationale:
+     - Sharpe 2.01 = Highest quality investment
+     - Earning $2.01 excess return for every 1% of risk
+     - Despite 50% expected return, strong Sharpe shows good value
+     - Deserves larger allocation
 
-3. INCREASE IXN from 17.5% to 20.0% (BUY $2.4M)
-   Reason: Sharpe 1.14 (best risk-adjusted return)
-           34.51% return with reasonable 28.60% volatility
-           Should be larger position
+2. INCREASE QQQ from 22.1% to 25.0% (BUY $2.9M)
+   Rationale:
+     - Sharpe 1.76 = Excellent risk-adjusted return
+     - 32% expected return with reasonable 17.19% volatility
+     - Second-best performer after IXN
+     - Broader diversification than IXN (100+ stocks vs sector)
 
-4. INCREASE QQQ from 22.1% to 25.0% (BUY $2.9M)
-   Reason: Sharpe 0.94 (second best)
-           19.89% return with 19.36% volatility
-           Broader diversification than IXN
-           Deserves larger allocation
+3. HOLD GLD at 22.0% (SELL $0.95M - slight reduction)
+   Rationale:
+     - Sharpe 0.85 = Good, but not exceptional
+     - Only 0.85 excess return for each 1% risk (vs 2.01 for IXN)
+     - Valuable as diversifier (commodity/gold hedge)
+     - 27.35% volatility higher than equities
+     - Slight reduction to reallocate to higher-Sharpe holdings
 
-5. INCREASE VNQ from 8.9% to 25.0% (BUY $15.3M)
-   Reason: Sharpe 0.57 (fourth best)
-           Severely underweighted for diversification
-           Provides income (3-4% dividend)
-           Low correlation to stocks (13.85% volatility)
-           5x increase in position
+4. INCREASE VNQ from 8.9% to 18.0% (BUY $8.6M)
+   Rationale:
+     - Sharpe 0.82 = Good risk-adjusted return
+     - CRITICALLY UNDERWEIGHTED at only 8.9%
+     - Real Estate provides diversification + income (3-4% dividends)
+     - 13.53% volatility = lowest among holdings = safer
+     - 5x increase in position justified
+     - Provides inflation protection and income generation
 
-New Allocation:
-  IXN: 20.0% (Best risk-adjusted returns)
-  QQQ: 25.0% (Strong risk-adjusted returns)
-  GLD: 15.0% (Reduced commodity exposure)
-  VNQ: 25.0% (Increased diversification)
-  IEF: 15.0% (Reduced bond exposure)
+5. REDUCE IEF from 28.5% to 15.0% (SELL $12.8M)
+   Rationale:
+     - Sharpe 0.31 = Lowest performing holding
+     - Bonds earning only 3.46% expected return
+     - 4.7% volatility = barely justified for such low return
+     - 28.5% allocation = OVERWEIGHTED
+     - In low-rate environment, bonds unattractive
+     - Reduce defensive drag on portfolio
 
-Impact:
-  - More concentrated in best-performing assets (IXN, QQQ)
-  - Increased diversification (VNQ doubled)
-  - Reduced drag from negative-Sharpe assets (GLD, IEF)
-  - Better risk-adjusted portfolio
-  - More aggressive positioning (80% equities + real estate)
+ALLOCATION TRANSFORMATION:
 
-Expected Result:
-  - Higher expected return (from concentrating in high-Sharpe holdings)
-  - Better risk-adjusted performance
-  - Less drag from underperforming bonds and gold
+Before Rebalancing:
+  Growth (IXN + QQQ): 39.6%
+  Defensive (IEF + VNQ): 37.4%
+  Hedge (GLD): 23.0%
+  Character: DEFENSIVE-TILTED
+
+After Rebalancing:
+  Growth (IXN + QQQ): 45.0% (+5.4%)
+  Defensive (IEF + VNQ): 33.0% (-4.4%)
+  Hedge (GLD): 22.0% (-1.0%)
+  Character: GROWTH-ORIENTED with DEFENSIVE BALANCE
+
+Impact on Portfolio:
+  - More concentrated in high-Sharpe holdings (IXN 2.01, QQQ 1.76)
+  - Better diversification (VNQ increased from 8.9% to 18%)
+  - Reduced bond drag (IEF reduced from 28.5% to 15%)
+  - Expected return: Increase ~2-3%
+  - Portfolio volatility: Slight increase to ~17-18%
+  - Sharpe ratio: Should improve due to higher-quality allocation
+
+Risk Management:
+  - All holdings remain positive Sharpe (no losers being eliminated)
+  - Real Estate (VNQ) provides income and stability
+  - Gold (GLD) remains for diversification
+  - Still have 33% defensive allocation (IEF + VNQ)
+  - More aggressive than before, but still balanced
+
+Client Recommendation:
+  APPROVE REBALANCING
+  Rationale: Optimize allocation based on real risk-adjusted returns
+  Timeline: Execute within 30 days
+  Tax Consideration: Review long-term vs short-term gains on sales
+  Rebalance Frequency: Quarterly review, rebalance if allocation drifts >5%
 */
