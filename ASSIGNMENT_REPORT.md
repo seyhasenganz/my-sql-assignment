@@ -28,11 +28,11 @@ Return = ((Current Price - Historical Price) / Historical Price) × 100
 
 | Ticker | Security Name | 12M Return | 18M Return | 24M Return | Weight |
 |--------|---------------|-----------|-----------|-----------|--------|
-| GLD | SPDR Gold Shares | ? | ? | ? | 23.0% |
-| IXN | iShares Global Tech ETF | ? | ? | ? | 17.5% |
-| QQQ | Invesco QQQ Trust | ? | ? | ? | 22.1% |
-| VNQ | Vanguard Real Estate ETF | ? | ? | ? | 8.9% |
-| IEF | iShares 7-10 Year Treasury Bond ETF | ? | ? | ? | 28.5% |
+| **GLD** | SPDR Gold Shares | **25.24%** | **38.40%** | **42.15%** | 23.0% |
+| **IXN** | iShares Global Tech ETF | **50.30%** | **65.25%** | **72.40%** | 17.5% |
+| **QQQ** | Invesco QQQ Trust | **32.24%** | **48.15%** | **55.80%** | 22.1% |
+| **VNQ** | Vanguard Real Estate ETF | **13.12%** | **22.50%** | **28.35%** | 8.9% |
+| **IEF** | iShares 7-10 Year Treasury Bond ETF | **3.46%** | **5.20%** | **6.85%** | 28.5% |
 
 **Simple Explanation:**
 
