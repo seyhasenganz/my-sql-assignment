@@ -1,13 +1,12 @@
--- =====================================================
--- UHNW Portfolio Analysis Database Schema
--- Assignment: Portfolio Analysis for Palo Alto Client
--- =====================================================
+-- ===================================
+-- UHNW PORTFOLIO ANALYSIS
+-- Database Schema
+-- ===================================
 
--- Create database
 CREATE DATABASE IF NOT EXISTS investment_portfolio;
 USE investment_portfolio;
 
--- 1. SECURITY MASTER LIST
+-- Tables from assignment
 CREATE TABLE security_masterlist (
     ticker VARCHAR(3),
     security_name VARCHAR(200),
@@ -18,16 +17,27 @@ CREATE TABLE security_masterlist (
     PRIMARY KEY (ticker)
 );
 
-INSERT INTO security_masterlist
-(ticker, security_name, security_type, major_asset_class, minor_asset_class, country)
-VALUES
+INSERT INTO security_masterlist VALUES
 ('IXN', 'iShares Global Tech ETF', 'etf', 'equity', 'technology', 'Global'),
 ('QQQ', 'Invesco QQQ Trust', 'etf', 'equity', 'large_cap', 'USA'),
 ('IEF', 'iShares 7-10 Year Treasury Bond ETF', 'etf', 'fixed_income', 'government_bond', 'USA'),
 ('VNQ', 'Vanguard Real Estate ETF', 'etf', 'real_assets', 'real_estate', 'USA'),
 ('GLD', 'SPDR Gold Shares', 'etf', 'commodities', 'gold', 'Global');
 
--- 2. CUSTOMER DETAILS
+CREATE TABLE acct_dim (
+    account_id INT,
+    customer_id INT,
+    account_name VARCHAR(100),
+    account_type VARCHAR(50),
+    strategy VARCHAR(100),
+    acct_open_date DATE,
+    acct_open_status TINYINT,
+    PRIMARY KEY (account_id)
+);
+
+INSERT INTO acct_dim VALUES
+(1001, 1, 'Palo Alto UHNW Portfolio', 'Managed Portfolio', 'Strategic Asset Allocation', '2024-01-01', 1);
+
 CREATE TABLE customer_details (
     customer_id INT,
     full_name VARCHAR(250),
@@ -40,29 +50,9 @@ CREATE TABLE customer_details (
     PRIMARY KEY (customer_id)
 );
 
-INSERT INTO customer_details
-(customer_id, full_name, first_name, last_name, email, customer_location, client_type, company_name)
-VALUES
+INSERT INTO customer_details VALUES
 (1, 'Palo Alto UHNW Client', 'Palo Alto', 'Client', 'client@portfolio.com', 'Palo Alto, California', 'Ultra High Net Worth', NULL);
 
--- 3. ACCOUNT DIMENSION
-CREATE TABLE acct_dim (
-    account_id INT,
-    customer_id INT,
-    account_name VARCHAR(100),
-    account_type VARCHAR(50),
-    strategy VARCHAR(100),
-    acct_open_date DATE,
-    acct_open_status TINYINT,
-    PRIMARY KEY (account_id)
-);
-
-INSERT INTO acct_dim
-(account_id, customer_id, account_name, account_type, strategy, acct_open_date, acct_open_status)
-VALUES
-(1001, 1, 'Palo Alto UHNW Portfolio', 'Managed Portfolio', 'Strategic Asset Allocation', '2024-01-01', 1);
-
--- 4. HOLDINGS DIMENSION
 CREATE TABLE holdings_dim (
     account_id INT,
     ticker VARCHAR(3),
@@ -71,16 +61,14 @@ CREATE TABLE holdings_dim (
     PRIMARY KEY (account_id, ticker)
 );
 
-INSERT INTO holdings_dim
-(account_id, ticker, portfolio_weight, market_value_million)
-VALUES
+INSERT INTO holdings_dim VALUES
 (1001, 'IXN', 17.50, 16.625),
 (1001, 'QQQ', 22.10, 20.995),
 (1001, 'IEF', 28.50, 27.075),
 (1001, 'VNQ', 8.90, 8.455),
 (1001, 'GLD', 23.00, 21.850);
 
--- 5. PRICING DAILY TABLE - For historical price data
+-- Pricing table - Load your downloaded data here
 CREATE TABLE pricing_daily (
     ticker VARCHAR(10),
     price_date DATE,
@@ -90,12 +78,6 @@ CREATE TABLE pricing_daily (
     close_price DECIMAL(10,4),
     adjusted_close DECIMAL(10,4),
     volume BIGINT,
-    price_type VARCHAR(50),
     PRIMARY KEY (ticker, price_date),
-    INDEX idx_ticker (ticker),
-    INDEX idx_date (price_date),
     INDEX idx_ticker_date (ticker, price_date)
 );
-
--- Note: Pricing data will be loaded from CSV files
--- Data should cover approximately 3 years for analysis
