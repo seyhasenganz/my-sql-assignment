@@ -40,19 +40,29 @@ LEFT JOIN (SELECT * FROM pricing_daily WHERE price_type = 'Adj Close' AND date =
 LEFT JOIN holdings_dim h ON t.ticker = h.ticker
 ORDER BY return_12m_pct DESC;
 
--- Q1 PORTFOLIO RETURN (SIMPLE)
+-- Q1 PORTFOLIO RETURN (SIMPLE) - 12M, 18M, 24M
 WITH today_prices AS (
     SELECT ticker, value FROM pricing_daily WHERE price_type = 'Adj Close' AND date = (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close')
 ),
 prices_12m_ago AS (
     SELECT ticker, value FROM pricing_daily WHERE price_type = 'Adj Close' AND date = (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close' AND date <= DATE_SUB((SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'), INTERVAL 252 DAY))
+),
+prices_18m_ago AS (
+    SELECT ticker, value FROM pricing_daily WHERE price_type = 'Adj Close' AND date = (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close' AND date <= DATE_SUB((SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'), INTERVAL 378 DAY))
+),
+prices_24m_ago AS (
+    SELECT ticker, value FROM pricing_daily WHERE price_type = 'Adj Close' AND date = (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close' AND date <= DATE_SUB((SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'), INTERVAL 504 DAY))
 )
 SELECT
     'TOTAL PORTFOLIO' as portfolio_metric,
-    ROUND(SUM((h.portfolio_weight/100) * ((tp.value - p12.value) / p12.value)) * 100, 2) as portfolio_return_12m_pct
+    ROUND(SUM((h.portfolio_weight/100) * ((tp.value - p12.value) / p12.value)) * 100, 2) as portfolio_return_12m_pct,
+    ROUND(SUM((h.portfolio_weight/100) * ((tp.value - p18.value) / p18.value)) * 100, 2) as portfolio_return_18m_pct,
+    ROUND(SUM((h.portfolio_weight/100) * ((tp.value - p24.value) / p24.value)) * 100, 2) as portfolio_return_24m_pct
 FROM holdings_dim h
 JOIN today_prices tp ON h.ticker = tp.ticker
 JOIN prices_12m_ago p12 ON h.ticker = p12.ticker
+JOIN prices_18m_ago p18 ON h.ticker = p18.ticker
+JOIN prices_24m_ago p24 ON h.ticker = p24.ticker
 WHERE h.account_id = 1001;
 
 -- ===================================
