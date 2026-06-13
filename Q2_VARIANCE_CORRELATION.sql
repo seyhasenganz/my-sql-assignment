@@ -33,44 +33,44 @@ WITH daily_returns AS (
 -- STEP 2: Calculate Variance & Other Statistics
 -- ===================================
 SELECT
-    ticker,
+    dr.ticker,
     s.security_name,
     s.major_asset_class,
     h.portfolio_weight,
 
     -- Data quality metrics
     COUNT(*) as total_observations,
-    COUNT(daily_return_pct) as valid_returns,
-    COUNT(DISTINCT date) as trading_days,
+    COUNT(dr.daily_return_pct) as valid_returns,
+    COUNT(DISTINCT dr.date) as trading_days,
 
     -- Return statistics
-    ROUND(AVG(daily_return_pct), 4) as avg_daily_return_pct,
-    ROUND(MIN(daily_return_pct), 4) as min_daily_return_pct,
-    ROUND(MAX(daily_return_pct), 4) as max_daily_return_pct,
+    ROUND(AVG(dr.daily_return_pct), 4) as avg_daily_return_pct,
+    ROUND(MIN(dr.daily_return_pct), 4) as min_daily_return_pct,
+    ROUND(MAX(dr.daily_return_pct), 4) as max_daily_return_pct,
 
     -- Variance Analysis (Primary metric for correlation comparison)
-    ROUND(VARIANCE(daily_return_pct), 6) as variance_daily_returns,
-    ROUND(STDDEV_POP(daily_return_pct), 4) as stdev_population,
-    ROUND(STDDEV_SAMP(daily_return_pct), 4) as stdev_sample,
+    ROUND(VARIANCE(dr.daily_return_pct), 6) as variance_daily_returns,
+    ROUND(STDDEV_POP(dr.daily_return_pct), 4) as stdev_population,
+    ROUND(STDDEV_SAMP(dr.daily_return_pct), 4) as stdev_sample,
 
     -- Return range
-    ROUND(MAX(daily_return_pct) - MIN(daily_return_pct), 2) as daily_return_range,
+    ROUND(MAX(dr.daily_return_pct) - MIN(dr.daily_return_pct), 2) as daily_return_range,
 
     -- Interpretation
     CASE
-        WHEN VARIANCE(daily_return_pct) > 3.0 THEN 'HIGH VARIANCE - Volatile'
-        WHEN VARIANCE(daily_return_pct) > 1.5 THEN 'MEDIUM VARIANCE - Moderate'
+        WHEN VARIANCE(dr.daily_return_pct) > 3.0 THEN 'HIGH VARIANCE - Volatile'
+        WHEN VARIANCE(dr.daily_return_pct) > 1.5 THEN 'MEDIUM VARIANCE - Moderate'
         ELSE 'LOW VARIANCE - Stable'
     END as variance_interpretation
 
-FROM daily_returns
-LEFT JOIN security_masterlist s ON daily_returns.ticker = s.ticker
+FROM daily_returns dr
+LEFT JOIN security_masterlist s ON dr.ticker = s.ticker
 LEFT JOIN holdings_dim h ON s.ticker = h.ticker AND h.account_id = 1001
 
-WHERE daily_return_pct IS NOT NULL
+WHERE dr.daily_return_pct IS NOT NULL
 
 GROUP BY
-    ticker,
+    dr.ticker,
     s.security_name,
     s.major_asset_class,
     h.portfolio_weight

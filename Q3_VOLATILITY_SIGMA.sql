@@ -64,12 +64,13 @@ SELECT
     ROUND(MAX(dr.daily_return) - MIN(dr.daily_return), 2) as daily_range_pct
 
 FROM daily_returns dr
-LEFT JOIN security_masterlist s ON dr.ticker = s.ticker
+JOIN security_masterlist s ON dr.ticker = s.ticker
 LEFT JOIN holdings_dim h ON s.ticker = h.ticker AND h.account_id = 1001
 
 WHERE dr.daily_return IS NOT NULL
 
 GROUP BY
+    dr.ticker,
     s.ticker,
     s.security_name,
     s.major_asset_class,
