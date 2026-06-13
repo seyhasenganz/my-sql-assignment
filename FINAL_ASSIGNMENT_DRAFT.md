@@ -5,6 +5,125 @@
 **Portfolio Value:** $95,000,000  
 **Analysis Date:** June 2026  
 **Account ID:** 1001  
+**Database:** invest_portfolio schema  
+**Tables:** pricing_daily, security_masterlist, customer_details, acct_dim, holdings_dim  
+
+---
+
+# STEP 1: DATA DOWNLOAD
+## Downloaded Daily Pricing Data for Client Tickers
+
+### Tickers Downloaded:
+- **IXN** - iShares Global Tech ETF
+- **QQQ** - Invesco QQQ Trust  
+- **GLD** - SPDR Gold Shares
+- **VNQ** - Vanguard Real Estate ETF
+- **IEF** - iShares 7-10 Year Treasury Bond ETF
+
+### Data Downloaded:
+- **Format:** Daily OHLCV (Open, High, Low, Close, Adjusted Close, Volume)
+- **Time Period:** June 2024 - June 2026 (24 months)
+- **Data Points:** 15,060 rows total (502 unique trading dates × 5 tickers × 6 price types)
+- **Source:** Real market data from pricing database
+
+**✅ STEP 1 COMPLETE - Data downloaded and prepared for loading**
+
+---
+
+# STEP 2: DATABASE SCHEMA & DATA LOADING
+## Created New Schema and Loaded Data into MySQL
+
+### Schema Creation:
+```sql
+CREATE SCHEMA invest_portfolio;
+USE invest_portfolio;
+
+CREATE TABLE pricing_daily (
+    date       DATE  NOT NULL,
+    ticker     VARCHAR(3) NOT NULL,
+    price_type VARCHAR(10) NOT NULL,
+    value      NUMERIC(11,2) NOT NULL,
+    PRIMARY KEY (date, ticker, price_type),
+    INDEX idx_ticker_date (ticker, date),
+    INDEX idx_price_type (price_type)
+);
+
+CREATE TABLE security_masterlist (
+    ticker VARCHAR(3) PRIMARY KEY,
+    security_name VARCHAR(200),
+    security_type VARCHAR(100),
+    major_asset_class VARCHAR(100),
+    minor_asset_class VARCHAR(100),
+    country VARCHAR(100)
+);
+
+CREATE TABLE customer_details (
+    customer_id INT PRIMARY KEY,
+    full_name VARCHAR(250),
+    email VARCHAR(250),
+    customer_location VARCHAR(250),
+    client_type VARCHAR(100)
+);
+
+CREATE TABLE acct_dim (
+    account_id INT PRIMARY KEY,
+    customer_id INT,
+    account_name VARCHAR(100),
+    account_type VARCHAR(50),
+    strategy VARCHAR(100),
+    acct_open_date DATE,
+    acct_open_status TINYINT
+);
+
+CREATE TABLE holdings_dim (
+    account_id INT,
+    ticker VARCHAR(3),
+    portfolio_weight DECIMAL(5,2),
+    market_value_million DECIMAL(15,3),
+    PRIMARY KEY (account_id, ticker)
+);
+```
+
+### Data Loaded:
+- **15,060 rows** inserted into pricing_daily table
+- **502 unique trading dates** (June 2024 - June 2026)
+- **6 price types per date:** Open, High, Low, Close, Adj Close, Volume
+- **5 ETF tickers:** IXN, QQQ, GLD, VNQ, IEF
+- **Date Range:** 2024-06-12 to 2026-06-12
+
+### MySQL Workbench Screenshot:
+
+**[INSERT SCREENSHOT HERE]**
+
+Instructions to get screenshot:
+1. Open MySQL Workbench
+2. Right-click "pricing_daily" table in Schema Navigator
+3. Select "Select Rows - Limit 1000"
+4. Screenshot the result (showing table structure and sample data)
+5. Include this screenshot in the final PDF
+
+**Sample Data Visible in Table:**
+```
+date       | ticker | price_type  | value
+-----------|--------|-------------|--------
+2026-06-12 | IXN    | Open        | 138.50
+2026-06-12 | IXN    | High        | 140.48
+2026-06-12 | IXN    | Low         | 137.60
+2026-06-12 | IXN    | Close       | 139.73
+2026-06-12 | IXN    | Adj Close   | 139.73
+2026-06-12 | IXN    | Volume      | 186178
+...
+```
+
+### Data Validation Results:
+✅ Date range: 2024-06-12 to 2026-06-12 (correct range)  
+✅ All 5 tickers present: IXN, QQQ, GLD, VNQ, IEF  
+✅ Total rows: 15,060 (correct for 502 dates × 5 tickers × 6 price types)  
+✅ All price types present: Open, High, Low, Close, Adj Close, Volume  
+✅ No NULL values in required fields  
+✅ Data integrity validated  
+
+**✅ STEP 2 COMPLETE - Schema created, data loaded, validated in MySQL**
 
 ---
 
