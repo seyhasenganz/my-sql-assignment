@@ -132,15 +132,11 @@ ORDER BY return_24m_pct DESC;
 
 **MAINTAIN Core 5-Holding Strategy + REBALANCE to Capitalize on Winners**
 
-Your current allocation of IXN, QQQ, GLD, VNQ, and IEF has proven effective, generating 34.27% total return over 24 months. This diversified approach works well. However, the allocation needs optimization: your best performer (IXN at 34.51%) is only 17.5% of portfolio, while your worst performer (IEF at 0.21%) is 28.5% - this is backwards. 
+The current allocation has proven effective, generating 34.27% total return over 24 months. However, optimization is needed: best performer (IXN 34.51%) is only 17.5% of portfolio, while worst performer (IEF 0.21%) is 28.5%. 
 
-**Action Plan:**
-1. Maintain the core 5-holding strategy (proven and working)
-2. Rebalance to shift capital from underperforming IEF (0.21% return) to outperforming IXN and QQQ (34.51% and 19.89% returns)
-3. Lock in your 34% gains strategically through profit-taking on winners
-4. Execute this rebalancing within 30 days while market conditions are stable and timing is ideal
+**Action Plan:** (1) Maintain the core 5-holding strategy - proven and working; (2) Rebalance to shift capital from underperforming IEF to outperforming IXN and QQQ; (3) Lock in 34% gains strategically through profit-taking; (4) Execute rebalancing within 30 days while timing is ideal.
 
-This protects profits while optimizing returns through disciplined reallocation.
+This protects gains while optimizing returns through disciplined reallocation.
 
 ---
 
@@ -204,16 +200,11 @@ ORDER BY variance_daily_returns DESC;
 
 **OPTIMIZE Allocation: Increase VNQ, Reduce IEF, Maintain GLD for Natural Hedging**
 
-Your 50:1 variance spread shows genuine diversification - assets move independently, not just different names. When tech stocks experience volatility, bonds and gold provide stability. Preserve this structure while optimizing position sizing.
+The 50:1 variance spread demonstrates genuine diversification - assets move independently. Bonds and gold provide stability when stocks experience volatility. Preserve this structure while optimizing position sizing.
 
-**Action Plan:**
-1. **INCREASE VNQ from 8.9% to 18%** - Real estate provides low correlation to stocks, 3-4% dividend income, and inflation protection. Currently underweighted; increasing creates meaningful diversification without sacrificing returns.
+**Action Plan:** (1) INCREASE VNQ from 8.9% to 18% - provides low correlation, 3-4% dividend income, and inflation protection; (2) REDUCE IEF from 28.5% to 15% - bonds are oversized, contributing only 1.38% to portfolio volatility; (3) MAINTAIN GLD at 23% - gold moves opposite to stocks, rising 10-15% during crashes.
 
-2. **REDUCE IEF from 28.5% to 15%** - Bonds are oversized for diversification value. At 28.5%, they contribute only 1.38% to portfolio volatility; reducing to 15% maintains sufficient defensive protection while freeing capital for higher-returning assets.
-
-3. **MAINTAIN GLD at 23%** - Gold moves opposite to stocks, rising 10-15% during crashes. This is invaluable insurance. High variance (4.54) reflects this protective value; maintain current allocation for wealth protection.
-
-This rebalancing maintains your natural hedging benefits while improving allocation efficiency across all diversifiers.
+This maintains natural hedging benefits while improving allocation efficiency.
 
 ---
 
@@ -265,24 +256,19 @@ ORDER BY annual_volatility_sigma DESC;
 
 ## Detailed Explanation
 
-✓ **16.84% volatility is MODERATE** - Perfect for UHNW (not too conservative, not too aggressive)  
-✓ **Risk well-distributed** - No single holding dominates (GLD max is 7.77% of portfolio risk)  
+✓ **16.84% volatility is MODERATE** - Appropriate for UHNW (not too conservative, not too aggressive)  
+✓ **Risk well-distributed** - No single holding dominates (GLD maximum is 7.77% of portfolio risk)  
 ✓ **Each asset serves purpose** - GLD/IXN for growth, IEF for stability, QQQ/VNQ for balance  
 
 ## Best Option Recommendation for Q3
 
-**REBALANCE Allocation: Accept 16.84% Current Risk + Reoptimize to 17.5% Post-Rebalance**
+**REBALANCE Allocation: Accept 16.84% Risk + Reoptimize to 17.5% Post-Rebalance**
 
-Your portfolio's 16.84% volatility is in the "Goldilocks zone" for UHNW investors - not too conservative (5% all-bond), not too aggressive (25%+ all-growth). This provides sufficient growth potential (17% upside), sufficient stability (17% downside protection), and sleep-at-night comfort.
+Portfolio volatility of 16.84% represents the optimal zone for UHNW investors - providing sufficient growth potential (17% upside) and sufficient stability (17% downside), without requiring excessive risk reduction.
 
-**Action Plan:**
-1. **ACCEPT current 16.84% volatility** - It's appropriate for your risk profile. Don't reduce further unless required.
+**Action Plan:** (1) ACCEPT current 16.84% volatility level - it is appropriate for the stated risk profile; (2) REBALANCE allocation - reduce IEF from 28.5% to 15% and increase VNQ from 8.9% to 18% (bonds at 28.5% contribute only 1.38% to portfolio risk while occupying excessive capital); (3) EXPECT post-rebalance volatility of 17.5% - only 0.66% higher, while gaining 2.66% in expected returns (+$2.53M annually).
 
-2. **REBALANCE allocation** - Reduce IEF from 28.5% to 15% and increase VNQ from 8.9% to 18%. Bonds at 28.5% are oversized, contributing only 1.38% to portfolio risk while occupying 28.5% of capital - inefficient allocation. Real estate at low variance provides better risk-adjusted benefits.
-
-3. **EXPECT post-rebalance volatility of 17.5%** - Only 0.66% higher than current 16.84%. In return, you gain 2.66% in expected annual returns (+$2.53M). This 4.2-to-1 return-to-volatility ratio is excellent for UHNW investors.
-
-Each asset serves its purpose: GLD/IXN for growth, VNQ for balanced diversification, IEF for stability. After rebalancing, risk remains well-distributed and appropriately managed.
+After rebalancing, risk remains well-distributed and appropriately managed.
 
 ---
 
@@ -344,43 +330,13 @@ ORDER BY sharpe_ratio DESC;
 
 ## Best Option Recommendation for Q4
 
-**DO NOT SELL ANY HOLDINGS + REOPTIMIZE ALLOCATION: Increase IXN/QQQ/VNQ, Reduce IEF, Add Value Exposure**
+**DO NOT SELL ANY HOLDINGS + REOPTIMIZE: Increase IXN/QQQ/VNQ, Reduce IEF, Consider Adding Value**
 
-All your holdings are quality investments with positive Sharpe ratios. The solution is not selling, but optimizing position sizing based on risk-adjusted returns.
+All holdings demonstrate quality with positive Sharpe ratios. Solution involves optimizing position sizing based on risk-adjusted returns rather than eliminating positions.
 
-**Action Plan - Specific Allocation Changes:**
+**Action Plan:** (1) INCREASE IXN from 17.5% to 20% (BUY $2.4M) - best Sharpe 2.01, currently undersized; (2) INCREASE QQQ from 22.1% to 25% (BUY $2.9M) - excellent Sharpe 1.76, provides diversification; (3) INCREASE VNQ from 8.9% to 18% (BUY $8.6M) - severely underweighted with Sharpe 0.82; (4) REDUCE IEF from 28.5% to 15% (SELL $12.8M) - lowest Sharpe 0.31, oversized; (5) MAINTAIN GLD at 23% - value is in protection during downturns; (6) OPTIONALLY ADD 5-10% dividend/value ETF (SCHD or VTV) to reduce tech concentration.
 
-1. **INCREASE IXN from 17.5% to 20% (BUY $2.4M)**
-   - Best Sharpe ratio (2.01): earns $2.01 excess return per 1% volatility
-   - Currently undersized for its quality
-   - 32% expected return justifies larger position
-
-2. **INCREASE QQQ from 22.1% to 25% (BUY $2.9M)**
-   - Second-best Sharpe (1.76) with 32.24% expected return
-   - Provides broader diversification (100+ companies) vs sector-focused IXN
-   - Balances growth with reduced concentration risk
-
-3. **INCREASE VNQ from 8.9% to 18% (BUY $8.6M)**
-   - Severely underweighted despite good Sharpe (0.82)
-   - Currently too small to provide meaningful diversification
-   - At 18%, becomes significant with 3-4% dividend income + inflation protection
-
-4. **REDUCE IEF from 28.5% to 15% (SELL $12.8M)**
-   - Lowest Sharpe (0.31) yet occupies largest position
-   - Bonds earning only 3.46% (barely above risk-free 2%)
-   - Oversized for defensive needs; reallocate to higher-return assets
-
-5. **MAINTAIN GLD at 23%**
-   - Don't be fooled by lower Sharpe (0.85) - value is in protection not returns
-   - Rises 10-15% during crashes (inverse to stocks)
-   - Standard UHNW allocation of 15-25% commodities; you're positioned perfectly
-
-6. **ADD 5-10% DIVIDEND/VALUE EQUITY (Optional enhancement)**
-   - Reduce growth tech concentration (currently IXN + QQQ focused)
-   - Consider SCHD (dividend yield 3-4%, Sharpe 0.8-1.2) or VTV (value ETF)
-   - Fund from IEF reduction if desired: sell $4.75M-$5.95M bonds, allocate $5-7M to new positions
-
-**Rationale:** You're not chasing performance or abandoning quality. This is disciplined optimization: allocate more capital to holdings with superior risk-adjusted returns, maintain strategic hedges (GLD), and improve diversification (VNQ) while freeing capital from oversized defensive positions (IEF).
+This represents disciplined optimization based on risk-adjusted returns while maintaining strategic diversification.
 
 ---
 
@@ -426,64 +382,13 @@ How will portfolio risk and returns change after rebalancing?
 
 ## Best Option Recommendation for Q5
 
-**APPROVE & EXECUTE REBALANCING IMMEDIATELY: 30-Day Timeline with Tax Strategy + Quarterly Monitoring**
+**APPROVE & EXECUTE REBALANCING: 30-Day Execution with Tax Strategy**
 
-Your portfolio is ready, market conditions are stable, and timing is ideal. You've achieved 34% gains in 24 months - this is the perfect moment to lock in profits and optimize allocation. This rebalancing gains $2.53M annually for only 0.66% more volatility (4.2:1 return-to-risk ratio).
+Portfolio conditions are optimal for rebalancing. The 34% gains achieved in 24 months provide the ideal moment to lock in profits and optimize allocation. Rebalancing generates $2.53M annually for only 0.66% additional volatility (4.2:1 return-to-risk ratio).
 
-**Action Plan - 30-Day Execution Timeline:**
+**Action Plan:** (1) Phase 1 (Days 1-5) - Review cost basis and tax implications (~$2.75M estimated tax); (2) Phase 2 (Days 6-20) - Execute sales: sell $12.8M IEF and $0.95M GLD; (3) Phase 3 (Days 21-30) - Execute purchases: buy $2.4M IXN, $2.9M QQQ, $8.6M VNQ. Post-rebalancing: monitor quarterly with 5% drift trigger for rebalancing. Tax consideration: long-term capital gains favorable at 20%; can spread sales over quarters if needed.
 
-**Phase 1 (Days 1-5): Preparation**
-- Review cost basis for each holding to identify lowest-basis shares to sell
-- Calculate capital gains tax exposure (~$2.75M total: $2.56M IEF + $0.19M GLD at 20% LTCG rate)
-- Consult tax advisor on timing optimization (consider spreading over 2 quarters if needed)
-- Prepare broker trading instructions
-- Identify tax-loss harvesting opportunities
-
-**Phase 2 (Days 6-20): Execute Sales**
-- Sell $12.8M IEF (bonds) in tranches if needed to optimize pricing
-- Sell $0.95M GLD (slight reduction, profit-taking)
-- Monitor market conditions; use weakness as opportunity to maintain schedule
-
-**Phase 3 (Days 21-30): Execute Purchases**
-- Buy $2.4M IXN (best Sharpe 2.01)
-- Buy $2.9M QQQ (excellent Sharpe 1.76)
-- Buy $8.6M VNQ (underweighted diversifier, Sharpe 0.82)
-- Use market dips to optimize entry prices
-
-**Key Metrics & Benefits:**
-
-**Returns Impact:** Gain $2.53M annually (+2.66% expected annual return)  
-**Risk Impact:** Volatility increases 0.66% (from 16.84% to 17.5% - minimal)  
-**Quality Impact:** Sharpe ratio improves +0.16 (+12.3% improvement in risk-adjusted quality)  
-**Diversification:** VNQ doubles (8.9% → 18%), adding meaningful real estate exposure  
-**Income:** Annual dividend income increases by ~$1M from higher VNQ allocation  
-
-**Tax Strategy:** Expected ~$2.75M tax liability. This is acceptable because:
-- You're locking in 34% gains (tax is price of success)
-- Long-term capital gains rates are favorable at 20%
-- Tax-smart execution (sell lowest basis shares first) minimizes liability
-- Spreading over 2 quarters if needed manages cash flow
-
-**Post-Rebalancing Monitoring (Quarterly):**
-- Monitor allocation drift; trigger rebalance if any position drifts >5% from targets
-- Annual Sharpe ratio review; reassess if individual holdings change dramatically
-- Generally rebalance annually or when drift exceeds 5%
-
-**Rationale:** This is disciplined optimization based on data, not emotional chasing. You're selling your lowest-quality holding (IEF, Sharpe 0.31) and buying your highest-quality holdings (IXN/QQQ, Sharpe 2.01/1.76) while improving diversification (VNQ). The mathematics are clear: $2.53M annual return gain for 0.66% volatility increase is excellent for UHNW investors.
-
-### FINAL VERDICT FOR Q5
-
-**✅ APPROVAL: Implement Rebalancing Immediately**
-
-**Why This Makes Sense:**
-- Gain $2.53M annually for only 0.66% volatility increase (4.2:1 return-to-risk)
-- Sharpe ratio improves 12.3% (better quality returns)
-- Allocation becomes balanced (45% growth, 33% defensive, 22% hedge)
-- Timing is ideal (stable markets, after strong performance)
-
-**Timeline:** 30 days  
-**Expected Results:** +$2.53M annual expected return, +0.16 Sharpe improvement  
-**Recommendation:** Execute now while conditions are favorable
+This represents disciplined optimization - higher returns with 12.3% improvement in risk-adjusted quality.
 
 ---
 
@@ -491,11 +396,11 @@ Your portfolio is ready, market conditions are stable, and timing is ideal. You'
 
 | Question | Answer | Best Recommendation |
 |----------|--------|-------------------|
-| **Q1: Returns** | 34.27% (24M), 13.24% (12M) | Rebalance to capitalize on winners, execute within 30 days |
+| **Q1: Returns** | 34.27% (24M), 13.24% (12M) | Maintain strategy, rebalance to capitalize on winners, execute within 30 days |
 | **Q2: Correlations** | 50:1 variance spread (excellent) | Increase VNQ to 18%, reduce IEF to 15%, maintain GLD for hedging |
 | **Q3: Volatility** | 16.84% (moderate & appropriate) | Accept current level, rebalance allocation, expect 17.5% post-rebalance |
-| **Q4: Sharpe** | IXN (2.01) > QQQ (1.76) > GLD (0.85) > VNQ (0.82) > IEF (0.31) | Buy IXN/QQQ/VNQ, reduce IEF, no sells (all are quality), add dividend ETF |
-| **Q5: Rebalancing** | +2.66% return, +0.66% volatility, +0.16 Sharpe | APPROVE - Gain $2.53M/year for 0.66% risk increase (4.2:1 ratio) |
+| **Q4: Sharpe** | IXN (2.01) > QQQ (1.76) > GLD (0.85) > VNQ (0.82) > IEF (0.31) | Increase IXN/QQQ/VNQ, reduce IEF, maintain GLD, consider value ETF |
+| **Q5: Rebalancing** | +2.66% return, +0.66% volatility, +0.16 Sharpe | APPROVE - execute 30-day plan, gain $2.53M/year for 0.66% risk (4.2:1) |
 
 ---
 
