@@ -74,22 +74,22 @@ SELECT
     s.security_name,
     h.portfolio_weight,
     -- Today's price
-    ROUND(tp.today_price, 2) as today_price,
+    ROUND(tp.value, 2) as today_price,
 
     -- 12-Month Return Calculation
-    ROUND(tp.price_12m_ago, 2) as price_12m_ago,
-    ROUND(((tp.today_price - p12.price_12m_ago) / p12.price_12m_ago) * 100, 2) as return_12m_pct,
+    ROUND(p12.value, 2) as price_12m_ago,
+    ROUND(((tp.value - p12.value) / p12.value) * 100, 2) as return_12m_pct,
 
     -- 18-Month Return Calculation
-    ROUND(p18.price_18m_ago, 2) as price_18m_ago,
-    ROUND(((tp.today_price - p18.price_18m_ago) / p18.price_18m_ago) * 100, 2) as return_18m_pct,
+    ROUND(p18.value, 2) as price_18m_ago,
+    ROUND(((tp.value - p18.value) / p18.value) * 100, 2) as return_18m_pct,
 
     -- 24-Month Return Calculation
-    ROUND(p24.price_24m_ago, 2) as price_24m_ago,
-    ROUND(((tp.today_price - p24.price_24m_ago) / p24.price_24m_ago) * 100, 2) as return_24m_pct,
+    ROUND(p24.value, 2) as price_24m_ago,
+    ROUND(((tp.value - p24.value) / p24.value) * 100, 2) as return_24m_pct,
 
     -- Dollar gains
-    ROUND((tp.today_price - p12.price_12m_ago) * h.market_value_million * 1000000 / p12.price_12m_ago, 0) as gain_12m_dollars
+    ROUND((tp.value - p12.value) * h.market_value_million * 1000000 / p12.value, 0) as gain_12m_dollars
 
 FROM security_masterlist s
 JOIN today_prices tp ON s.ticker = tp.ticker
