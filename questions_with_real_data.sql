@@ -1,6 +1,8 @@
 -- ===================================
 -- UHNW PORTFOLIO ANALYSIS - USING REAL DATA
 -- SQL Queries for 5 Questions
+-- Updated to use pricing_daily table structure:
+-- Columns: date, ticker, price_type, value
 -- ===================================
 
 USE invest_portfolio;
@@ -8,7 +10,6 @@ USE invest_portfolio;
 -- ===================================
 -- QUESTION 1: RETURNS (12M, 18M, 24M)
 -- ===================================
--- Calculate returns for each ticker over different periods
 
 SELECT
     sml.ticker,
@@ -17,56 +18,43 @@ SELECT
     ROUND(((end_price.value - start_price_18m.value) / start_price_18m.value) * 100, 2) as return_18m_pct,
     ROUND(((end_price.value - start_price_24m.value) / start_price_24m.value) * 100, 2) as return_24m_pct,
     hd.portfolio_weight as current_weight_pct,
-    ROUND(hd.portfolio_weight * ((end_price.value - start_price_12m.value) / start_price_12m.value), 2) as contribution_to_portfolio_return_12m
+    ROUND(hd.portfolio_weight * ((end_price.value - start_price_12m.value) / start_price_12m.value), 2) as contribution_12m
 FROM security_masterlist sml
 LEFT JOIN holdings_dim hd ON sml.ticker = hd.ticker AND hd.account_id = 1001
 LEFT JOIN (
-    -- Most recent Adj Close price
     SELECT ticker, value
-    FROM pricing_daily_new
+    FROM pricing_daily
     WHERE price_type = 'Adj Close'
-    AND date = (SELECT MAX(date) FROM pricing_daily_new WHERE price_type = 'Adj Close')
+    AND date = (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close')
 ) end_price ON sml.ticker = end_price.ticker
 LEFT JOIN (
-    -- 12M ago Adj Close
     SELECT ticker, value
-    FROM pricing_daily_new
+    FROM pricing_daily
     WHERE price_type = 'Adj Close'
     AND date = (
-        SELECT MAX(date) FROM pricing_daily_new
+        SELECT MAX(date) FROM pricing_daily p2
         WHERE price_type = 'Adj Close'
-        AND DATEDIFF(
-            (SELECT MAX(date) FROM pricing_daily_new WHERE price_type = 'Adj Close'),
-            date
-        ) >= 252  -- 252 trading days = 12 months
+        AND DATE_ADD(p2.date, INTERVAL 12 MONTH) >= (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close')
     )
 ) start_price_12m ON sml.ticker = start_price_12m.ticker
 LEFT JOIN (
-    -- 18M ago Adj Close
     SELECT ticker, value
-    FROM pricing_daily_new
+    FROM pricing_daily
     WHERE price_type = 'Adj Close'
     AND date = (
-        SELECT MAX(date) FROM pricing_daily_new
+        SELECT MAX(date) FROM pricing_daily p3
         WHERE price_type = 'Adj Close'
-        AND DATEDIFF(
-            (SELECT MAX(date) FROM pricing_daily_new WHERE price_type = 'Adj Close'),
-            date
-        ) >= 378  -- 378 trading days = 18 months
+        AND DATE_ADD(p3.date, INTERVAL 18 MONTH) >= (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close')
     )
 ) start_price_18m ON sml.ticker = start_price_18m.ticker
 LEFT JOIN (
-    -- 24M ago Adj Close
     SELECT ticker, value
-    FROM pricing_daily_new
+    FROM pricing_daily
     WHERE price_type = 'Adj Close'
     AND date = (
-        SELECT MAX(date) FROM pricing_daily_new
+        SELECT MAX(date) FROM pricing_daily p4
         WHERE price_type = 'Adj Close'
-        AND DATEDIFF(
-            (SELECT MAX(date) FROM pricing_daily_new WHERE price_type = 'Adj Close'),
-            date
-        ) >= 504  -- 504 trading days = 24 months
+        AND DATE_ADD(p4.date, INTERVAL 24 MONTH) >= (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close')
     )
 ) start_price_24m ON sml.ticker = start_price_24m.ticker
 ORDER BY return_12m_pct DESC;
@@ -74,54 +62,19 @@ ORDER BY return_12m_pct DESC;
 -- PORTFOLIO LEVEL RETURNS
 SELECT
     'TOTAL PORTFOLIO' as portfolio_metric,
-    ROUND(
-        SUM(hd.portfolio_weight * ((end_price.value - start_price_12m.value) / start_price_12m.value)),
-        2
-    ) as portfolio_return_12m_pct,
-    ROUND(
-        SUM(hd.portfolio_weight * ((end_price.value - start_price_18m.value) / start_price_18m.value)),
-        2
-    ) as portfolio_return_18m_pct,
-    ROUND(
-        SUM(hd.portfolio_weight * ((end_price.value - start_price_24m.value) / start_price_24m.value)),
-        2
-    ) as portfolio_return_24m_pct
+    ROUND(SUM(hd.portfolio_weight * ((end_price.value - start_price_12m.value) / start_price_12m.value)), 2) as portfolio_return_12m_pct,
+    ROUND(SUM(hd.portfolio_weight * ((end_price.value - start_price_18m.value) / start_price_18m.value)), 2) as portfolio_return_18m_pct,
+    ROUND(SUM(hd.portfolio_weight * ((end_price.value - start_price_24m.value) / start_price_24m.value)), 2) as portfolio_return_24m_pct
 FROM holdings_dim hd
-LEFT JOIN (
-    SELECT ticker, value FROM pricing_daily_new
-    WHERE price_type = 'Adj Close'
-    AND date = (SELECT MAX(date) FROM pricing_daily_new WHERE price_type = 'Adj Close')
-) end_price ON hd.ticker = end_price.ticker
-LEFT JOIN (
-    SELECT ticker, value FROM pricing_daily_new
-    WHERE price_type = 'Adj Close'
-    AND date = (
-        SELECT MAX(date) FROM pricing_daily_new WHERE price_type = 'Adj Close'
-        AND DATEDIFF((SELECT MAX(date) FROM pricing_daily_new WHERE price_type = 'Adj Close'), date) >= 252
-    )
-) start_price_12m ON hd.ticker = start_price_12m.ticker
-LEFT JOIN (
-    SELECT ticker, value FROM pricing_daily_new
-    WHERE price_type = 'Adj Close'
-    AND date = (
-        SELECT MAX(date) FROM pricing_daily_new WHERE price_type = 'Adj Close'
-        AND DATEDIFF((SELECT MAX(date) FROM pricing_daily_new WHERE price_type = 'Adj Close'), date) >= 378
-    )
-) start_price_18m ON hd.ticker = start_price_18m.ticker
-LEFT JOIN (
-    SELECT ticker, value FROM pricing_daily_new
-    WHERE price_type = 'Adj Close'
-    AND date = (
-        SELECT MAX(date) FROM pricing_daily_new WHERE price_type = 'Adj Close'
-        AND DATEDIFF((SELECT MAX(date) FROM pricing_daily_new WHERE price_type = 'Adj Close'), date) >= 504
-    )
-) start_price_24m ON hd.ticker = start_price_24m.ticker
+LEFT JOIN (SELECT ticker, value FROM pricing_daily WHERE price_type = 'Adj Close' AND date = (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close')) end_price ON hd.ticker = end_price.ticker
+LEFT JOIN (SELECT ticker, value FROM pricing_daily WHERE price_type = 'Adj Close' AND date = (SELECT MAX(date) FROM pricing_daily p2 WHERE price_type = 'Adj Close' AND DATE_ADD(p2.date, INTERVAL 12 MONTH) >= (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'))) start_price_12m ON hd.ticker = start_price_12m.ticker
+LEFT JOIN (SELECT ticker, value FROM pricing_daily WHERE price_type = 'Adj Close' AND date = (SELECT MAX(date) FROM pricing_daily p3 WHERE price_type = 'Adj Close' AND DATE_ADD(p3.date, INTERVAL 18 MONTH) >= (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'))) start_price_18m ON hd.ticker = start_price_18m.ticker
+LEFT JOIN (SELECT ticker, value FROM pricing_daily WHERE price_type = 'Adj Close' AND date = (SELECT MAX(date) FROM pricing_daily p4 WHERE price_type = 'Adj Close' AND DATE_ADD(p4.date, INTERVAL 24 MONTH) >= (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'))) start_price_24m ON hd.ticker = start_price_24m.ticker
 WHERE hd.account_id = 1001;
 
 -- ===================================
 -- QUESTION 2: CORRELATIONS & VARIANCE
 -- ===================================
--- Calculate variance for each ticker (proxy for correlation when CORR() unavailable)
 
 WITH daily_returns AS (
     SELECT
@@ -134,9 +87,9 @@ WITH daily_returns AS (
              LAG(value) OVER (PARTITION BY ticker ORDER BY date)) * 100,
             4
         ) as daily_return_pct
-    FROM pricing_daily_new
+    FROM pricing_daily
     WHERE price_type = 'Adj Close'
-    AND date >= DATE_SUB((SELECT MAX(date) FROM pricing_daily_new), INTERVAL 6 MONTH)
+    AND date >= DATE_SUB((SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'), INTERVAL 6 MONTH)
 )
 SELECT
     ticker,
@@ -163,9 +116,9 @@ WITH daily_returns_12m AS (
              LAG(value) OVER (PARTITION BY ticker ORDER BY date)) * 100,
             4
         ) as daily_return_pct
-    FROM pricing_daily_new
+    FROM pricing_daily
     WHERE price_type = 'Adj Close'
-    AND date >= DATE_SUB((SELECT MAX(date) FROM pricing_daily_new), INTERVAL 12 MONTH)
+    AND date >= DATE_SUB((SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'), INTERVAL 12 MONTH)
 ),
 daily_returns_6m AS (
     SELECT
@@ -175,9 +128,9 @@ daily_returns_6m AS (
              LAG(value) OVER (PARTITION BY ticker ORDER BY date)) * 100,
             4
         ) as daily_return_pct
-    FROM pricing_daily_new
+    FROM pricing_daily
     WHERE price_type = 'Adj Close'
-    AND date >= DATE_SUB((SELECT MAX(date) FROM pricing_daily_new), INTERVAL 6 MONTH)
+    AND date >= DATE_SUB((SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'), INTERVAL 6 MONTH)
 )
 SELECT
     sml.ticker,
@@ -211,9 +164,9 @@ WITH returns_12m AS (
              LAG(value) OVER (PARTITION BY ticker ORDER BY date)) * 100,
             4
         ) as daily_return_pct
-    FROM pricing_daily_new
+    FROM pricing_daily
     WHERE price_type = 'Adj Close'
-    AND date >= DATE_SUB((SELECT MAX(date) FROM pricing_daily_new), INTERVAL 12 MONTH)
+    AND date >= DATE_SUB((SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'), INTERVAL 12 MONTH)
 )
 SELECT
     sml.ticker,
@@ -239,7 +192,6 @@ ORDER BY sharpe_ratio DESC;
 -- ===================================
 -- QUESTION 5: PORTFOLIO IMPACT ANALYSIS
 -- ===================================
--- Compare current vs proposed allocation
 
 SELECT
     'Metric' as analysis,
