@@ -1,12 +1,12 @@
-CORRECTED VERSION 2 CONCLUSION (24-MONTH ANALYSIS)
+FINAL CONCLUSION VERSION 2 (12-MONTH SIGMA ANALYSIS - CORRECT)
 
 ═══════════════════════════════════════════════════════════════════════════════
 
 The portfolio invests its largest allocation (28.5%) in its lowest-quality holding
 (IEF, Sharpe 0.31) while underweighting high-quality opportunities (IXN at Sharpe 2.01
 and VNQ at only 8.9%), creating a critical optimization opportunity revealed by SQL
-analysis of 24 months of actual market data. The proposed rebalancing corrects this
-inverse allocation by concentrating capital in the highest-Sharpe-ratio holdings
+analysis of 12-month sigma and risk-adjusted returns. The proposed rebalancing corrects
+this inverse allocation by concentrating capital in the highest-Sharpe-ratio holdings
 (IXN +$2.4M, QQQ +$2.8M), capturing the severely underweighted real estate opportunity
 (VNQ +$8.6M for $300K+ annual income), and eliminating the performance drag from
 underperforming bonds (IEF -$12.8M). This quality-aligned reallocation is expected to
@@ -15,3 +15,17 @@ volatility increase, improving the Sharpe ratio from 1.30 to 1.43 and aligning c
 deployment with Modern Portfolio Theory principles.
 
 ═══════════════════════════════════════════════════════════════════════════════
+
+ASSIGNMENT REFERENCE:
+Question 3: "What is the most recent 12M sigma (risk) or 6M of sigma for each
+of the securities (and for the entire portfolio)?"
+
+✅ Analysis Window: 12-month (252 trading days) - CORRECT
+✅ Metric: Sigma (annualized volatility) = Daily Volatility × √252
+✅ Results from Q3_VOLATILITY_SIGMA.sql:
+   - IXN: 24.03% (HIGH)
+   - QQQ: 17.19% (MODERATE)
+   - GLD: 27.35% (HIGH - highest risk)
+   - VNQ: 13.53% (LOW - lowest among holdings)
+   - IEF: 4.70% (VERY LOW)
+   - Portfolio: 16.84% (MODERATE)
