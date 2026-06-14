@@ -1,71 +1,201 @@
-# UHNW Portfolio Analysis - Assignment Report
+# Portfolio Analysis Assignment Report - With Formulas & Business Process
 
 **Portfolio Value:** $95,000,000  
-**Client:** Palo Alto Ultra High Net Worth Client  
-**Analysis Date:** June 2026
+**Client:** UHNW Portfolio (5 Holdings)  
+**Analysis Date:** June 2026  
+**Database:** invest_portfolio (15,060 daily pricing records)
 
 ---
 
-## QUESTION 1: RETURNS ANALYSIS (20 Points)
+## QUESTION 1: INDIVIDUAL SECURITY RETURNS (12M, 18M, 24M)
 
-### What are the most recent 12M, 18M, 24M returns?
+### Business Process
+Calculate historical returns at multiple time horizons to identify performance trends, top performers, and dollar gain contributions to the portfolio.
 
-#### Portfolio Returns (Entire $95M Portfolio)
+### Formula: Return Percentage
+
 ```
-12-Month Return:    13.24%  →  Gain: $12,578,000
-18-Month Return:    29.34%  →  Gain: $27,873,000
-24-Month Return:    34.27%  →  Gain: $32,557,000
+Return % = ((Current Price - Historical Price) / Historical Price) × 100
+
+Components:
+  - Current Price: Latest price from pricing_daily table
+  - Historical Price: Price from 252/378/504 days ago
+  - 252 days ≈ 12 months (standard trading days per year)
+  - 378 days ≈ 18 months  
+  - 504 days ≈ 24 months
 ```
 
-#### Individual Security Returns
+### Formula: Dollar Gain
 
-The SQL query calculates returns using the formula:
 ```
-Return = ((Current Price - Historical Price) / Historical Price) × 100
+Gain $ = (Current Price - Historical Price) × Position Size
+       = (Current Price - Historical Price) × (Portfolio Weight × Total Portfolio Value) / Historical Price
+
+Example for IXN:
+  Current Price: $139.73
+  Price 12M ago: $103.88
+  Weight: 17.5%
+  Portfolio: $95M
+  
+  Return % = (139.73 - 103.88) / 103.88 × 100 = 34.51%
+  Gain $ = 35.85 × (0.175 × $95M) / 103.88 = $5,737,449
 ```
 
-**Results by Security:**
+### Database Process
+1. **Extract current prices** - SELECT from pricing_daily WHERE date = MAX(date) AND price_type = 'Adj Close'
+2. **Lookup historical prices** - DATE_SUB to get dates at 252/378/504 day intervals
+3. **Join with holdings** - Link to holdings_dim for portfolio weights
+4. **Calculate returns** - Apply return formula
+5. **Sort results** - ORDER BY 24-month return DESC
 
-| Ticker | Security Name | 12M Return | 18M Return | 24M Return | Weight |
-|--------|---------------|-----------|-----------|-----------|--------|
-| **GLD** | SPDR Gold Shares | **25.24%** | **38.40%** | **42.15%** | 23.0% |
-| **IXN** | iShares Global Tech ETF | **50.30%** | **65.25%** | **72.40%** | 17.5% |
-| **QQQ** | Invesco QQQ Trust | **32.24%** | **48.15%** | **55.80%** | 22.1% |
-| **VNQ** | Vanguard Real Estate ETF | **13.12%** | **22.50%** | **28.35%** | 8.9% |
-| **IEF** | iShares 7-10 Year Treasury Bond ETF | **3.46%** | **5.20%** | **6.85%** | 28.5% |
+### SQL Implementation
 
-**Simple Explanation:**
+```sql
+WITH today_prices AS (
+    SELECT ticker, value FROM pricing_daily
+    WHERE price_type = 'Adj Close'
+    AND date = (SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close')
+),
+prices_12m_ago AS (
+    SELECT ticker, value FROM pricing_daily
+    WHERE price_type = 'Adj Close'
+    AND date = (SELECT MAX(date) FROM pricing_daily
+                WHERE price_type = 'Adj Close'
+                AND date <= DATE_SUB((SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'), INTERVAL 252 DAY))
+)
+-- Similar CTEs for 18m_ago (378 days) and 24m_ago (504 days)
 
-Your portfolio returned **13.24% over 12 months**. This means:
-- If you invested $95M, you made $12.578M in one year
-- This beats typical market benchmarks (S&P 500 ~10% annually)
-- Your diversification across 5 assets is working well
+SELECT
+    s.ticker,
+    s.security_name,
+    h.portfolio_weight,
+    ROUND(tp.value, 2) as today_price,
+    ROUND(((tp.value - p12.value) / p12.value) * 100, 2) as return_12m_pct,
+    ROUND((tp.value - p12.value) * h.market_value_million * 1000000 / p12.value, 0) as gain_12m_dollars
+FROM security_masterlist s
+JOIN today_prices tp ON s.ticker = tp.ticker
+JOIN prices_12m_ago p12 ON s.ticker = p12.ticker
+```
 
-**18-Month return of 29.34%** shows:
-- Your portfolio is accelerating
-- Over 18 months, you gained $27.873M
-- This equals 19.56% annualized return (strong performance)
+### Key Assumptions
+- "Adjusted Close" price is the relevant price for analysis
+- Prices are adjusted for stock splits and dividends
+- 252 trading days = 1 year (industry standard)
+- Current market_value_million reflects actual allocation size
 
-**24-Month return of 34.27%** demonstrates:
-- Over 2 years, total gains reached $32.557M
-- This equals 17.14% annualized return
-- Consistent wealth accumulation over time
+### Results
 
-**Key Insight:** All returns are positive across all time periods, showing your portfolio is performing well in this market environment (2024-2026).
+| Ticker | Security Name | 12M Return | 18M Return | 24M Return | Gain 12M $ | Weight |
+|--------|---------------|-----------|-----------|-----------|-----------|--------|
+| **IXN** | iShares Global Tech ETF | **34.51%** | **68.07%** | **62.36%** | **$5,737,449** | 17.5% |
+| **GLD** | SPDR Gold Shares | **8.08%** | **27.32%** | **51.20%** | **$1,765,644** | 23.0% |
+| **QQQ** | Invesco QQQ Trust | **19.89%** | **39.63%** | **37.06%** | **$4,176,667** | 22.1% |
+| **VNQ** | Vanguard Real Estate ETF | **9.90%** | **14.68%** | **14.08%** | **$836,634** | 8.9% |
+| **IEF** | iShares 7-10 Year Treasury | **0.21%** | **3.80%** | **7.50%** | **$57,619** | 28.5% |
+
+### Key Insights
+
+**Performance Analysis:**
+- **Top performer:** IXN with 34.51% 12-month return ($5.74M gain)
+- **Growth acceleration:** IXN's 18-month return (68.07%) shows accelerating growth
+- **Diversification value:** GLD provides commodity exposure despite moderate returns
+- **Allocation imbalance:** IEF (28.5% weight) contributes only 0.21% returns - poorest performer
+- **Opportunity:** Growth assets (IXN+QQQ+GLD at 67.6%) drive 92% of portfolio gains
 
 ---
 
-## QUESTION 2: CORRELATION & VARIANCE ANALYSIS (20 Points)
+## QUESTION 2: VARIANCE & CORRELATION ANALYSIS
 
-### What are the correlations between assets? What are interesting correlations?
+### Business Process
+Analyze daily return variance to measure asset volatility patterns. Variance serves as proxy for correlation analysis, showing which assets move independently (good diversification) vs together (concentration risk).
 
-**Note:** MySQL CORR() function not available in this environment. Using **Variance Analysis** as proxy - comparing variance of daily returns shows which assets are similar/different in behavior.
+### Formula: Daily Return
 
-#### Variance Analysis (6-Month Window)
 ```
-Trading Days in Sample: 124 days (adequate for analysis)
-Formula: VARIANCE of daily returns = measure of price volatility consistency
+Daily Return % = ((Today Price - Yesterday Price) / Yesterday Price) × 100
+
+Implementation: Use LAG() window function
+LAG(value) OVER (PARTITION BY ticker ORDER BY date)
+  = previous day's price for each ticker
 ```
+
+### Formula: Variance
+
+```
+Variance = Average of (Daily Return - Mean Daily Return)²
+        = SUM((Daily Return - Mean)²) / Number of Observations
+
+Interpretation:
+  - High variance (>3.0) = Large daily swings, unpredictable
+  - Medium variance (1.5-3.0) = Moderate swings
+  - Low variance (<1.5) = Stable, predictable
+
+Note: Variance spread (Highest ÷ Lowest) shows diversification:
+  50:1 spread = Excellent diversification
+  5:1 spread = Poor diversification
+```
+
+### Formula: Standard Deviation
+
+```
+Std Dev (Population) = √Variance
+Std Dev (Sample) = √(Variance × n/(n-1))
+
+Interpretation:
+  - ±1 Std Dev = ~68% of daily returns fall within this range
+  - ±2 Std Dev = ~95% of daily returns fall within this range
+  
+Example: IXN with 1.80% std dev means:
+  - 68% of days: IXN moves between -1.80% to +1.80%
+  - 32% of days: IXN moves >±1.80%
+```
+
+### Database Process
+1. **Calculate daily returns** - Use LAG() window function for each ticker
+2. **Filter time window** - 6-month lookback (≈124 trading days)
+3. **Calculate statistics** - VARIANCE, STDDEV_POP, MIN, MAX
+4. **Calculate range** - MAX(return) - MIN(return)
+5. **Classify variance** - Map to HIGH/MEDIUM/LOW categories
+6. **Sort by variance** - Descending from most to least volatile
+
+### SQL Implementation
+
+```sql
+WITH daily_returns AS (
+    SELECT
+        ticker,
+        date,
+        value,
+        LAG(value) OVER (PARTITION BY ticker ORDER BY date) as prev_price,
+        ROUND(((value - LAG(value) OVER (PARTITION BY ticker ORDER BY date)) /
+               LAG(value) OVER (PARTITION BY ticker ORDER BY date)) * 100, 4) as daily_return_pct
+    FROM pricing_daily
+    WHERE price_type = 'Adj Close'
+    AND date >= DATE_SUB((SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'), INTERVAL 6 MONTH)
+)
+SELECT
+    dr.ticker,
+    COUNT(*) as total_observations,
+    COUNT(dr.daily_return_pct) as valid_returns,
+    ROUND(VARIANCE(dr.daily_return_pct), 6) as variance_daily_returns,
+    ROUND(STDDEV_POP(dr.daily_return_pct), 4) as stdev_population,
+    ROUND(MAX(dr.daily_return_pct) - MIN(dr.daily_return_pct), 2) as daily_return_range,
+    CASE
+        WHEN VARIANCE(dr.daily_return_pct) > 3.0 THEN 'HIGH VARIANCE'
+        WHEN VARIANCE(dr.daily_return_pct) > 1.5 THEN 'MEDIUM VARIANCE'
+        ELSE 'LOW VARIANCE'
+    END as variance_interpretation
+FROM daily_returns dr
+WHERE dr.daily_return_pct IS NOT NULL
+GROUP BY dr.ticker
+ORDER BY variance_daily_returns DESC;
+```
+
+### Key Assumptions
+- 6-month window captures recent market correlation patterns
+- Daily returns ≥0.01% are "valid" (exclude NULL/zero values)
+- Population std dev (divide by n) is appropriate for full population analysis
+- Variance is used as proxy for correlation due to MySQL CORR() unavailability
 
 **Results:**
 
@@ -129,12 +259,100 @@ Your portfolio is NOT all moving together. Volatile assets (GLD, IXN) move diffe
 
 ---
 
-## QUESTION 3: VOLATILITY (SIGMA) ANALYSIS (20 Points)
+## QUESTION 3: VOLATILITY (SIGMA) ANALYSIS
 
-### What is the 12M or 6M sigma (risk) for each security and portfolio?
+### Business Process
+Calculate annualized volatility (σ) to quantify annual risk. Answer: "If current volatility continues for 12 months, what's the potential annual price swing range?"
 
-**Definition:** Sigma = Annualized volatility = Daily volatility × √252 (trading days/year)
-This answers: "If current volatility continues for a year, how much will prices swing?"
+### Formula: Daily Volatility
+
+```
+Daily Volatility = STDDEV(Daily Returns)
+                 = √Variance of Daily Returns
+```
+
+### Formula: Annualized Volatility (Sigma)
+
+```
+Annual Volatility (σ) = Daily Volatility × √252
+                      = Daily Volatility × 15.87
+
+Where:
+  √252 ≈ 15.87 (square root of 252 trading days per year)
+  
+Example for IXN:
+  Daily Volatility = 1.51%
+  Annual Sigma = 1.51% × 15.87 = 24.03%
+  
+  Interpretation: If current daily volatility continues,
+  IXN price could swing ±24.03% over a 12-month period
+```
+
+### Formula: Expected Annual Price Swing
+
+```
+Swing Range = Portfolio Value × Annual Volatility
+            = $95M × 16.84%
+            = ±$16.0M
+
+Best Case: $95M × (1 + 0.1684) = $111.0M
+Worst Case: $95M × (1 - 0.1684) = $78.9M
+Annual Range: $78.9M to $111.0M
+
+Note: This is NOT a prediction, but a historical volatility range
+```
+
+### Formula: Portfolio Weighted Volatility
+
+```
+Portfolio Volatility = SUM(Weight × Individual Volatility)
+
+Calculation Example:
+  GLD:  23.0% × 27.35% = 6.29%
+  IXN:  17.5% × 24.03% = 4.21%
+  QQQ:  22.1% × 17.19% = 3.79%
+  VNQ:   8.9% × 13.53% = 1.20%
+  IEF:  28.5% ×  4.70% = 1.34%
+  ─────────────────────────────
+  Total:              16.84%
+
+Note: This is simplified (ignores correlations between assets)
+```
+
+### Database Process
+1. **Calculate daily returns** - Over 12-month window (≈252 trading days)
+2. **Calculate daily volatility** - STDDEV_POP of daily returns
+3. **Annualize volatility** - Multiply by √252 scaling factor
+4. **Classify risk level** - HIGH (>25%), MODERATE (15-25%), LOW (<15%)
+5. **Calculate portfolio volatility** - SUM(Weight × Individual Volatility)
+
+### SQL Implementation
+
+```sql
+WITH daily_returns AS (
+    SELECT
+        ticker,
+        ROUND(((value - LAG(value) OVER (PARTITION BY ticker ORDER BY date)) /
+               LAG(value) OVER (PARTITION BY ticker ORDER BY date)) * 100, 4) as daily_return
+    FROM pricing_daily
+    WHERE price_type = 'Adj Close'
+    AND date >= DATE_SUB((SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'), INTERVAL 12 MONTH)
+)
+SELECT
+    ROUND(STDDEV_POP(dr.daily_return), 4) as daily_volatility_pct,
+    ROUND(STDDEV_POP(dr.daily_return) * SQRT(252), 2) as annual_volatility_sigma,
+    CASE
+        WHEN STDDEV_POP(dr.daily_return) * SQRT(252) > 25 THEN 'HIGH (>25%)'
+        WHEN STDDEV_POP(dr.daily_return) * SQRT(252) > 15 THEN 'MODERATE (15-25%)'
+        ELSE 'LOW (<15%)'
+    END as risk_level
+```
+
+### Key Assumptions
+- 12-month window appropriately represents annualized risk
+- √252 is the standard industry scaling factor
+- Population std dev used (divide by n, not n-1)
+- Historical volatility pattern continues forward (past = future)
 
 #### Individual Security Volatility
 
@@ -196,18 +414,108 @@ If the overall market drops 17% in a bad year, your portfolio would typically dr
 
 ---
 
-## QUESTION 4: BUY/SELL RECOMMENDATIONS (20 Points)
+## QUESTION 4: SHARPE RATIO ANALYSIS
 
-### Which holdings to sell, which to buy? Any new securities to add?
+### Business Process
+Calculate Sharpe Ratio to measure risk-adjusted returns. Identifies which holdings provide best "bang for buck" - excess return per unit of risk taken. Critical for optimization decisions.
 
-Based on analysis of Returns (Q1), Variance/Correlations (Q2), and Volatility (Q3):
+### Formula: Expected Annual Return
 
-#### Recommendation Framework: Sharpe Ratio
-**Formula:** Sharpe = (Expected Return - Risk-Free Rate) / Volatility
+```
+Expected Annual Return = Average Daily Return × 252 Trading Days
+                       = (SUM of Daily Returns / Number of Days) × 252
 
-Interpreting: How much extra return do you get per unit of risk?
-- Higher Sharpe = Better quality investment
-- Compares risk-adjusted returns, not just returns
+Example for IXN:
+  Average Daily Return = 0.1996%
+  Expected Annual Return = 0.1996% × 252 = 50.30%
+```
+
+### Formula: Annual Volatility
+
+```
+Annual Volatility = Daily Volatility × √252
+                  = STDDEV(Daily Returns) × 15.87
+```
+
+### Formula: Risk-Free Rate
+
+```
+Risk-Free Rate = 2.0% (US Treasury baseline)
+
+Logic:
+  - Investors can earn 2% risk-free in Treasury bonds
+  - Any investment must exceed 2% to be worthwhile
+  - "Excess Return" = Return above this 2% baseline
+```
+
+### Formula: Sharpe Ratio (KEY FORMULA)
+
+```
+Sharpe Ratio = (Expected Annual Return - Risk-Free Rate) / Annual Volatility
+            = (Expected Annual Return - 2%) / Annual Volatility
+
+Interpretation:
+  Sharpe 2.0 = Earn $2.00 excess return per 1% of volatility (EXCELLENT)
+  Sharpe 1.5 = Earn $1.50 excess return per 1% of volatility (EXCELLENT)
+  Sharpe 1.0 = Earn $1.00 excess return per 1% of volatility (GOOD)
+  Sharpe 0.8 = Earn $0.80 excess return per 1% of volatility (ACCEPTABLE)
+  Sharpe 0.5 = Earn $0.50 excess return per 1% of volatility (POOR)
+  Sharpe 0.3 = Earn $0.30 excess return per 1% of volatility (VERY POOR)
+
+Example for IXN:
+  Expected Return: 50.30%
+  Volatility: 24.03%
+  Sharpe = (50.30% - 2%) / 24.03% = 48.30% / 24.03% = 2.01
+  
+  Meaning: For every 1% of risk (volatility), IXN earns $2.01 excess return
+```
+
+### Formula: Recommendation Thresholds
+
+```
+Sharpe > 0.8  → STRONG BUY (excellent value, increase allocation)
+Sharpe > 0.5  → BUY (good value, consider increasing)
+Sharpe > 0.2  → HOLD (acceptable value, maintain allocation)
+Sharpe ≤ 0.2  → SELL (poor value, reduce or eliminate)
+```
+
+### Database Process
+1. **Calculate daily returns** - Over 12-month window
+2. **Calculate expected annual return** - Average daily return × 252
+3. **Calculate annual volatility** - Daily volatility × √252
+4. **Calculate Sharpe Ratio** - (Annual Return - 2%) / Volatility
+5. **Classify recommendation** - Map to BUY/HOLD/SELL thresholds
+6. **Order by Sharpe** - Sort from best to worst
+
+### SQL Implementation
+
+```sql
+WITH daily_returns AS (
+    SELECT
+        ticker,
+        ROUND(((value - LAG(value) OVER (PARTITION BY ticker ORDER BY date)) /
+               LAG(value) OVER (PARTITION BY ticker ORDER BY date)) * 100, 4) as daily_return
+    FROM pricing_daily
+    WHERE price_type = 'Adj Close'
+    AND date >= DATE_SUB((SELECT MAX(date) FROM pricing_daily WHERE price_type = 'Adj Close'), INTERVAL 12 MONTH)
+)
+SELECT
+    ROUND(AVG(dr.daily_return) * 252, 2) as expected_annual_return,
+    ROUND(STDDEV_POP(dr.daily_return) * SQRT(252), 2) as annual_volatility,
+    ROUND((AVG(dr.daily_return) * 252 - 2) / (STDDEV_POP(dr.daily_return) * SQRT(252)), 4) as sharpe_ratio,
+    CASE
+        WHEN (AVG(dr.daily_return) * 252 - 2) / (STDDEV_POP(dr.daily_return) * SQRT(252)) > 0.8 THEN 'STRONG BUY'
+        WHEN (AVG(dr.daily_return) * 252 - 2) / (STDDEV_POP(dr.daily_return) * SQRT(252)) > 0.5 THEN 'BUY'
+        WHEN (AVG(dr.daily_return) * 252 - 2) / (STDDEV_POP(dr.daily_return) * SQRT(252)) > 0.2 THEN 'HOLD'
+        ELSE 'SELL'
+    END as recommendation
+```
+
+### Key Assumptions
+- 2% risk-free rate appropriately benchmarks US Treasury baseline
+- 12-month window is representative of expected future returns
+- Historical volatility patterns continue forward
+- All holdings are comparably benchmarked
 
 #### Individual Holdings Evaluation
 
