@@ -1,364 +1,461 @@
-# DATA IMPORT GUIDE - Converting Excel to MySQL
-## Simple Step-by-Step Instructions
+# FRIEND_DATA_IMPORT_GUIDE.md
+
+## Complete Data Import Guide for Stock Prices Database
+
+This guide provides detailed instructions for importing stock price data into your `daily_stock_prices` table.
 
 ---
 
-## WHAT YOUR DATA SHOULD LOOK LIKE
+## Table of Contents
 
-Your Excel file should have 3 columns:
-
-| Date | Ticker | ClosePrice |
-|------|--------|-----------|
-| 2024-06-12 | IXN | 138.50 |
-| 2024-06-11 | IXN | 137.20 |
-| 2024-06-10 | IXN | 136.80 |
-| 2024-06-12 | QQQ | 425.30 |
-| 2024-06-11 | QQQ | 423.50 |
+1. [Data Format Requirements](#data-format-requirements)
+2. [Pre-Import Checklist](#pre-import-checklist)
+3. [Import Methods](#import-methods)
+4. [Verifying Data](#verifying-data)
+5. [Troubleshooting](#troubleshooting)
+6. [Data Validation](#data-validation)
 
 ---
 
-## METHOD 1: IMPORT VIA CSV (RECOMMENDED)
+## Data Format Requirements
 
-### Step 1: Prepare CSV File
+### Column Order & Data Types
 
-**In Excel:**
-1. Open your file (All_ticker.xlsx)
-2. Make sure it has exactly 3 columns: Date, Ticker, ClosePrice
-3. Check that dates are in format: YYYY-MM-DD (e.g., 2024-06-12)
-4. File → Save As
-5. Choose format: "CSV (Comma delimited)" (.csv)
-6. Save as: `portfolio_data.csv`
-7. Click "Yes" when asked about compatibility
+Your data must match this structure:
 
-**Important:** Note where you saved the file!
-Example: `C:\Users\YourName\Documents\portfolio_data.csv`
-
-### Step 2: Import into MySQL Workbench
-
-**Step 2A: Start Import Process**
-1. Open MySQL Workbench
-2. Click **Server** menu (top)
-3. Click **Data Import** (or **Data Export**)
-4. Window opens
-
-**Step 2B: Select Your File**
-1. Check "Import from Self-Contained File"
-2. Click "..." button to browse
-3. Navigate to your `portfolio_data.csv` file
-4. Click "Open"
-
-**Step 2C: Choose Destination**
-1. In the dropdown, select database: `portfolio_analysis`
-2. Choose table: `daily_prices`
-
-**Step 2D: Configure Import**
-1. Click **Import Progress** tab
-2. Make sure format is set to: CSV
-3. Click "Start Import"
-4. You should see: "Import completed successfully"
-
-### Step 3: Verify Data Loaded
-
-Run this query in MySQL Workbench:
-
-```sql
-SELECT COUNT(*) as total_records FROM daily_prices;
+```
+Column Name      | Data Type        | Example
+================================================================================
+trading_date     | DATE (YYYY-MM-DD)| 2026-06-18
+ticker           | VARCHAR(10)      | IXN
+open_price       | DECIMAL(10,2)    | 145.03
+high_price       | DECIMAL(10,2)    | 146.63
+low_price        | DECIMAL(10,2)    | 144.49
+close_price      | DECIMAL(10,2)    | 146.33
+adj_close        | DECIMAL(10,2)    | 146.33
+volume           | BIGINT           | 361000
 ```
 
-**Expected result:** Shows a number (how many rows were imported)
+### Important Notes:
+- `price_id` is AUTO_INCREMENT (don't include in imports)
+- Date format MUST be `YYYY-MM-DD`
+- Prices should be decimal numbers with up to 2 decimal places
+- Volume should be integer values
+- Ticker symbols are typically 3-5 characters (uppercase)
 
 ---
 
-## METHOD 2: MANUAL LOAD DATA (If CSV Import Doesn't Work)
+## Pre-Import Checklist
 
-### Step 1: Save Your Data as CSV
+Before importing, verify:
 
-Same as Method 1, Steps 1-7
+```bash
+☐ Database is created
+☐ Table daily_stock_prices exists
+☐ You have backup of any existing data (optional)
+☐ Data file is in the correct format
+☐ You have necessary file permissions
+☐ MySQL server is running
+```
 
-### Step 2: Get Full File Path
+### Verify Table Exists:
 
-**On Windows:**
-1. Right-click on `portfolio_data.csv` file
-2. Click "Properties"
-3. Copy the full path (e.g., `C:\Users\YourName\Documents\portfolio_data.csv`)
+```sql
+USE your_database_name;
+DESCRIBE daily_stock_prices;
+```
 
-**On Mac:**
-1. Right-click file → "Get Info"
-2. Copy path
+Expected output:
+```
++---------------+------------------+------+-----+---------+----------------+
+| Field         | Type             | Null | Key | Default | Extra          |
++---------------+------------------+------+-----+---------+----------------+
+| price_id      | int              | NO   | PRI | NULL    | auto_increment |
+| trading_date  | date             | NO   | MUL | NULL    |                |
+| ticker        | varchar(10)      | NO   |     | NULL    |                |
+| open_price    | decimal(10,2)    | YES  |     | NULL    |                |
+| high_price    | decimal(10,2)    | YES  |     | NULL    |                |
+| low_price     | decimal(10,2)    | YES  |     | NULL    |                |
+| close_price   | decimal(10,2)    | NO   |     | NULL    |                |
+| adj_close     | decimal(10,2)    | YES  |     | NULL    |                |
+| volume        | bigint           | YES  |     | NULL    |                |
++---------------+------------------+------+-----+---------+----------------+
+```
 
-### Step 3: Enable Local File Loading
+---
 
-Run this query in MySQL Workbench:
+## Import Methods
 
+### Method 1: Direct SQL Script (RECOMMENDED)
+
+**File:** `aligned_stock_prices.sql`
+
+This is the easiest method - the file already has correct formatting.
+
+#### From MySQL Command Line:
+
+```bash
+# Enter MySQL
+mysql -u your_username -p your_database_name
+
+# In MySQL prompt:
+SOURCE /path/to/aligned_stock_prices.sql;
+```
+
+#### From System Command Line:
+
+```bash
+mysql -u your_username -p your_database_name < /path/to/aligned_stock_prices.sql
+```
+
+#### From MySQL Workbench:
+
+1. Open File > Open SQL Script
+2. Select `aligned_stock_prices.sql`
+3. Click the Execute button (lightning bolt icon)
+4. Wait for completion message
+
+**Example Success Output:**
+```
+Query OK, 2500 rows affected (12.34 sec)
+Records: 2500  Deleted: 0  Skipped: 0  Warnings: 0
+```
+
+---
+
+### Method 2: Load from CSV File
+
+#### Create CSV File Format
+
+Save your CSV file with this format (no header row):
+
+```csv
+2026-06-18,IXN,145.03,146.63,144.49,146.33,146.33,361000
+2026-06-17,IXN,143.42,144.21,140.72,141.04,141.04,213500
+2026-06-16,IXN,144.26,144.99,140.94,141.03,141.03,270200
+```
+
+Or WITH header row (then use IGNORE 1 ROWS):
+
+```csv
+trading_date,ticker,open_price,high_price,low_price,close_price,adj_close,volume
+2026-06-18,IXN,145.03,146.63,144.49,146.33,146.33,361000
+2026-06-17,IXN,143.42,144.21,140.72,141.04,141.04,213500
+```
+
+#### Import CSV (No Header):
+
+```sql
+LOAD DATA LOCAL INFILE '/absolute/path/to/your/file.csv'
+INTO TABLE daily_stock_prices
+FIELDS TERMINATED BY ','
+(trading_date, ticker, open_price, high_price, low_price, close_price, adj_close, volume);
+```
+
+#### Import CSV (With Header):
+
+```sql
+LOAD DATA LOCAL INFILE '/absolute/path/to/your/file.csv'
+INTO TABLE daily_stock_prices
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(trading_date, ticker, open_price, high_price, low_price, close_price, adj_close, volume);
+```
+
+#### Enable LOAD DATA LOCAL
+
+If you get an error about local infile:
+
+**In MySQL (temporary for session):**
 ```sql
 SET GLOBAL local_infile = 1;
 ```
 
-### Step 4: Import the Data
-
-Replace `/path/to/your/file.csv` with your actual file path:
-
-```sql
-LOAD DATA LOCAL INFILE '/path/to/portfolio_data.csv'
-INTO TABLE portfolio_analysis.daily_prices
-FIELDS TERMINATED BY ','
-ENCLOSED BY '"'
-LINES TERMINATED BY '\n'
-(trading_date, ticker, closing_price);
+**In my.cnf (permanent):**
+```ini
+[mysqld]
+local_infile=1
 ```
-
-**Example (Windows):**
-```sql
-LOAD DATA LOCAL INFILE 'C:/Users/YourName/Documents/portfolio_data.csv'
-INTO TABLE portfolio_analysis.daily_prices
-FIELDS TERMINATED BY ','
-ENCLOSED BY '"'
-LINES TERMINATED BY '\n'
-(trading_date, ticker, closing_price);
-```
-
-Note: Use forward slashes `/` even on Windows!
 
 ---
 
-## METHOD 3: MANUAL INSERT (Last Resort)
+### Method 3: Manual INSERT Statements
 
-If CSV import doesn't work, manually insert data:
-
-### Step 1: Prepare Your Data
-
-In Excel, arrange data like this:
-
-| A | B | C |
-|---|---|---|
-| 2024-06-12 | IXN | 138.50 |
-| 2024-06-11 | IXN | 137.20 |
-
-### Step 2: Create SQL INSERT Statements
-
-For each row in Excel, create an INSERT statement:
+For small amounts of data, use INSERT:
 
 ```sql
-INSERT INTO daily_prices (trading_date, ticker, closing_price) VALUES
-('2024-06-12', 'IXN', 138.50),
-('2024-06-11', 'IXN', 137.20),
-('2024-06-10', 'IXN', 136.80),
-('2024-06-12', 'QQQ', 425.30),
-('2024-06-11', 'QQQ', 423.50),
-('2024-06-10', 'QQQ', 421.80),
-('2024-06-12', 'IEF', 97.50),
-('2024-06-11', 'IEF', 97.60),
--- Continue for all your data...
+INSERT INTO daily_stock_prices (trading_date, ticker, open_price, high_price, low_price, close_price, adj_close, volume)
+VALUES
+  ('2026-06-18', 'IXN', 145.03, 146.63, 144.49, 146.33, 146.33, 361000),
+  ('2026-06-17', 'IXN', 143.42, 144.21, 140.72, 141.04, 141.04, 213500),
+  ('2026-06-16', 'IXN', 144.26, 144.99, 140.94, 141.03, 141.03, 270200);
+```
+
+#### Batch INSERT for Better Performance:
+
+```sql
+INSERT INTO daily_stock_prices (trading_date, ticker, open_price, high_price, low_price, close_price, adj_close, volume)
+VALUES
+  ('2026-06-18', 'IXN', 145.03, 146.63, 144.49, 146.33, 146.33, 361000),
+  ('2026-06-17', 'IXN', 143.42, 144.21, 140.72, 141.04, 141.04, 213500),
+  ('2026-06-16', 'IXN', 144.26, 144.99, 140.94, 141.03, 141.03, 270200),
+  -- Add more rows...
 ;
 ```
 
-### Step 3: Run in MySQL Workbench
+---
 
-1. Paste the entire INSERT statement
-2. Click lightning bolt to execute
-3. You should see: "X rows affected" (where X = number of rows)
+### Method 4: Using a Script to Generate INSERT Statements
+
+If you have raw data, use a Python/bash script to generate INSERT statements:
+
+```python
+import csv
+
+output_lines = []
+with open('raw_data.csv', 'r') as f:
+    for row in csv.reader(f):
+        date, ticker, open_p, high_p, low_p, close_p, adj_p, volume = row
+        sql = f"('{date}','{ticker}',{open_p},{high_p},{low_p},{close_p},{adj_p},{volume}),"
+        output_lines.append(sql)
+
+print("INSERT INTO daily_stock_prices VALUES")
+print('\n'.join(output_lines[:-1]) + output_lines[-1].rstrip(','))
+print(";")
+```
 
 ---
 
-## VERIFYING YOUR DATA
+## Verifying Data
 
-Run these queries to check everything loaded correctly:
+### Step 1: Check Row Count
 
-### Check 1: Total Records
 ```sql
-SELECT COUNT(*) as total_records FROM daily_prices;
+-- Total records
+SELECT COUNT(*) as total_records FROM daily_stock_prices;
+
+-- Expected output should show number of rows imported
 ```
-**Should show:** Number of rows you imported
 
-### Check 2: Records Per Ticker
+### Step 2: Verify by Ticker
+
 ```sql
-SELECT
-    ticker,
-    COUNT(*) as record_count
-FROM daily_prices
+-- Count by ticker
+SELECT ticker, COUNT(*) as record_count
+FROM daily_stock_prices
 GROUP BY ticker
 ORDER BY ticker;
 ```
-**Should show:** Each ticker with count
-```
-IEF    250
-GLD    250
-IXN    250
-QQQ    250
-VNQ    250
-```
 
-### Check 3: Date Range
+### Step 3: Check Date Range
+
 ```sql
+-- See earliest and latest dates
 SELECT
-    MIN(trading_date) as earliest_date,
-    MAX(trading_date) as latest_date,
-    COUNT(DISTINCT trading_date) as unique_dates
-FROM daily_prices;
+  MIN(trading_date) as earliest_date,
+  MAX(trading_date) as latest_date
+FROM daily_stock_prices;
 ```
-**Should show:** Your earliest and latest dates
 
-### Check 4: Sample Data
-```sql
-SELECT * FROM daily_prices LIMIT 10;
-```
-**Should show:** First 10 rows looking correct
+### Step 4: Sample Data Review
 
-### Check 5: All 5 Tickers Present
 ```sql
-SELECT DISTINCT ticker FROM daily_prices ORDER BY ticker;
+-- View random samples
+SELECT * FROM daily_stock_prices
+ORDER BY RAND()
+LIMIT 10;
+
+-- View first records
+SELECT * FROM daily_stock_prices
+ORDER BY trading_date, ticker
+LIMIT 20;
+
+-- View specific ticker
+SELECT * FROM daily_stock_prices
+WHERE ticker = 'IXN'
+ORDER BY trading_date DESC
+LIMIT 10;
 ```
-**Should show:**
-```
-GLD
-IEF
-IXN
-QQQ
-VNQ
+
+### Step 5: Data Integrity Checks
+
+```sql
+-- Check for NULL values in required columns
+SELECT COUNT(*)
+FROM daily_stock_prices
+WHERE trading_date IS NULL OR ticker IS NULL OR close_price IS NULL;
+-- Should return 0 if all data is valid
+
+-- Check for duplicate records
+SELECT trading_date, ticker, COUNT(*)
+FROM daily_stock_prices
+GROUP BY trading_date, ticker
+HAVING COUNT(*) > 1;
+-- Should return 0 if no duplicates
+
+-- Check price ranges (sanity check)
+SELECT
+  MIN(close_price) as lowest_price,
+  MAX(close_price) as highest_price,
+  AVG(close_price) as avg_price
+FROM daily_stock_prices;
 ```
 
 ---
 
-## COMMON PROBLEMS & SOLUTIONS
+## Troubleshooting
 
-### Problem: "File not found"
-**Solution:**
-- Check the file path is correct
-- Use forward slashes `/` not backslashes `\`
-- Example: `C:/Users/Name/Documents/file.csv`
-
-### Problem: "Incorrect integer value"
-**Solution:**
-- Make sure dates are in YYYY-MM-DD format
-- Make sure prices are numbers, not text
-- Example: `2024-06-12` not `06/12/2024`
-
-### Problem: "0 rows affected"
-**Solution:**
-- Check CSV file is not empty
-- Check field names match table columns
-- Make sure CSV uses commas as separator (not semicolons or tabs)
-
-### Problem: "Access denied for user 'root'@'localhost'"
-**Solution:**
-- Make sure MySQL server is running
-- Check username and password
-- Try different MySQL connection
-
-### Problem: "No data in table after import"
-**Solution:**
-1. Check if table was created correctly: `SHOW TABLES;`
-2. Check if data was really imported: `SELECT COUNT(*) FROM daily_prices;`
-3. Try manual INSERT instead (Method 3)
+### Error: "Table doesn't exist"
+```
+ERROR 1146: Table 'database.daily_stock_prices' doesn't exist
+```
+**Solution:** Create the table first using the provided schema.
 
 ---
 
-## EXAMPLE: COMPLETE IMPORT WALKTHROUGH
-
-### My Data:
+### Error: "LOAD DATA LOCAL not allowed"
 ```
-Date,Ticker,Price
-2024-06-12,IXN,138.50
-2024-06-11,IXN,137.20
-2024-06-12,QQQ,425.30
-2024-06-11,QQQ,423.50
-2024-06-12,GLD,195.75
-2024-06-11,GLD,194.80
-2024-06-12,VNQ,89.50
-2024-06-11,VNQ,88.90
-2024-06-12,IEF,97.50
-2024-06-11,IEF,97.60
+ERROR 3948: Loading local data is disabled; this must be enabled on both the client and server
 ```
-
-### Step 1: Save as CSV
-1. Excel → File → Save As → CSV format
-2. Save as `my_portfolio.csv`
-3. File saved at: `C:\Users\Student\Documents\my_portfolio.csv`
-
-### Step 2: Create Tables
+**Solution:** Enable local_infile:
 ```sql
-USE portfolio_analysis;
-
-CREATE TABLE daily_prices (
-    price_id INT AUTO_INCREMENT PRIMARY KEY,
-    trading_date DATE NOT NULL,
-    ticker VARCHAR(10) NOT NULL,
-    closing_price DECIMAL(10, 2) NOT NULL
-);
+SET GLOBAL local_infile = 1;
 ```
+Then reconnect and try again.
 
-### Step 3: Import Data
+---
+
+### Error: "File not found"
+```
+ERROR 2 (HY000): Can't find file '/path/to/file'
+```
+**Solution:** 
+- Use absolute path, not relative path
+- Check file permissions (chmod 644 file.csv)
+- Use forward slashes or escape backslashes
+
+---
+
+### Error: "Incorrect date format"
+```
+ERROR 1292: Incorrect date value: '06-18-2026' for column 'trading_date'
+```
+**Solution:** 
+- Use YYYY-MM-DD format
+- Check your source data format
+- Convert dates before importing
+
+---
+
+### Error: "Duplicate entry"
+```
+ERROR 1062: Duplicate entry '2026-06-18-IXN' for key 'idx_ticker_date'
+```
+**Solution:**
+- Delete existing data first if reimporting
+- Check for duplicate rows in source file
+- Use INSERT IGNORE to skip duplicates
+
+---
+
+### Slow Import Performance
+
+If import is very slow:
+
 ```sql
-LOAD DATA LOCAL INFILE 'C:/Users/Student/Documents/my_portfolio.csv'
-INTO TABLE daily_prices
-FIELDS TERMINATED BY ','
-LINES TERMINATED BY '\n'
-IGNORE 1 ROWS
-(trading_date, ticker, closing_price);
+-- Disable indexes temporarily
+ALTER TABLE daily_stock_prices DISABLE KEYS;
+
+-- Do your import here
+SOURCE aligned_stock_prices.sql;
+
+-- Re-enable indexes
+ALTER TABLE daily_stock_prices ENABLE KEYS;
 ```
 
-### Step 4: Verify
+---
+
+### Delete Data & Reimport
+
 ```sql
-SELECT * FROM daily_prices;
-```
+-- Delete all data
+DELETE FROM daily_stock_prices;
 
-**Result:**
-```
-price_id | trading_date | ticker | closing_price
-1        | 2024-06-12   | IXN    | 138.50
-2        | 2024-06-11   | IXN    | 137.20
-3        | 2024-06-12   | QQQ    | 425.30
-...
-```
+-- Or drop table and recreate
+DROP TABLE daily_stock_prices;
 
-✅ **Success!** Data is loaded.
-
----
-
-## FORMAT REQUIREMENTS
-
-Your CSV file MUST have:
-
-✅ **Correct Format:**
-```
-Date,Ticker,Price
-2024-06-12,IXN,138.50
-2024-06-11,IXN,137.20
-2024-06-10,IXN,136.80
-```
-
-❌ **Wrong Format (will fail):**
-```
-Date | Ticker | Price          (using pipes instead of commas)
-06/12/2024,IXN,138.50         (date format wrong)
-2024-06-12,ixn,138.50         (ticker lowercase)
-"2024-06-12","IXN","138.50"    (extra quotes)
+-- Then recreate table and reimport
 ```
 
 ---
 
-## FINAL CHECKLIST BEFORE ANALYSIS
+## Data Validation
 
-- [ ] Created `portfolio_analysis` database
-- [ ] Created `daily_prices` table
-- [ ] Created `ticker_info` table
-- [ ] Inserted ticker information (5 rows)
-- [ ] Imported daily prices from CSV or manual insert
-- [ ] Verified data loaded: `SELECT COUNT(*) FROM daily_prices;`
-- [ ] Checked all 5 tickers present
-- [ ] Checked date range covers 12+ months
-- [ ] Verified no NULL values in important columns
+### Complete Validation Script
 
-**Once all checkmarks are done, you're ready for analysis! 🚀**
+```sql
+-- Run this after import to validate everything
+
+-- 1. Count records
+SELECT 'Total Records:' as check_name, COUNT(*) as result
+FROM daily_stock_prices
+UNION ALL
+
+-- 2. Unique tickers
+SELECT 'Unique Tickers:', COUNT(DISTINCT ticker)
+FROM daily_stock_prices
+UNION ALL
+
+-- 3. Date range
+SELECT 'Days Covered:', COUNT(DISTINCT trading_date)
+FROM daily_stock_prices
+UNION ALL
+
+-- 4. Null values
+SELECT 'NULL values in close_price:', COUNT(*)
+FROM daily_stock_prices
+WHERE close_price IS NULL
+UNION ALL
+
+-- 5. Invalid prices (negative)
+SELECT 'Negative prices:', COUNT(*)
+FROM daily_stock_prices
+WHERE close_price < 0
+UNION ALL
+
+-- 6. Zero volume
+SELECT 'Zero volume records:', COUNT(*)
+FROM daily_stock_prices
+WHERE volume = 0;
+```
 
 ---
 
-## STILL STUCK?
+## Next Steps
 
-If data won't import:
-1. Try manual insert (Method 3) - slower but always works
-2. Check CSV file is saved correctly (open it in Notepad to verify)
-3. Contact your professor - import issues are common!
-4. Ask for help in class forum
+1. ✓ Create the table (see FRIEND_STEP_BY_STEP_GUIDE.md)
+2. ✓ Import data (use methods above)
+3. ✓ Validate data (use verification scripts)
+4. → Run test queries (FRIEND_ASSIGNMENT_BEGINNER_GUIDE.sql)
+5. → Analyze data (FRIEND_SQL_FOR_REAL_DATA.sql)
 
-**Don't waste time on import - manual insert works fine!**
+---
+
+## Quick Command Reference
+
+| Task | Command |
+|------|---------|
+| Import SQL file | `SOURCE aligned_stock_prices.sql;` |
+| Import CSV | `LOAD DATA LOCAL INFILE '...csv' INTO TABLE daily_stock_prices FIELDS TERMINATED BY ',';` |
+| Check row count | `SELECT COUNT(*) FROM daily_stock_prices;` |
+| See data | `SELECT * FROM daily_stock_prices LIMIT 10;` |
+| Delete all | `DELETE FROM daily_stock_prices;` |
+| Get summary | `SELECT ticker, COUNT(*) FROM daily_stock_prices GROUP BY ticker;` |
+
+---
+
+**Repository:** https://github.com/seyhasenganz/my-sql-assignment/
+
+For more help, see:
+- `FRIEND_STEP_BY_STEP_GUIDE.md` - General guide
+- `FRIEND_HOW_TO_RUN_IMPORT.md` - Quick import steps

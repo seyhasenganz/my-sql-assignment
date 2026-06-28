@@ -1,222 +1,363 @@
--- ═══════════════════════════════════════════════════════════════════════════════
--- IMPORT CODE FOR All_ticker.csv
--- Direct Copy-Paste Ready for MySQL Workbench
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ============================================================================
+-- FRIEND_IMPORT_CODE_FOR_ALL_TICKER.sql
+-- SQL Code to Import Stock Price Data for All Tickers
+-- ============================================================================
+-- This file provides the structure and examples for importing data
+-- for multiple stock tickers. Follow the patterns shown here!
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- STEP 1: CREATE DATABASE AND TABLES
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ============================================================================
+-- OVERVIEW
+-- ============================================================================
+/*
+This file helps you understand how to import data for different tickers.
+The main approach is to use the aligned_stock_prices.sql file which
+contains pre-formatted INSERT statements for all available tickers.
 
-CREATE DATABASE IF NOT EXISTS portfolio_db;
-USE portfolio_db;
+Current tickers in the database:
+- IXN (Technology Index)
+- GLD (Gold ETF)
+- And others...
 
--- Drop tables if they exist
-DROP TABLE IF EXISTS daily_stock_prices;
-DROP TABLE IF EXISTS security_info;
+You can expand this to include additional tickers by:
+1. Using the import patterns shown below
+2. Preparing CSV files for each ticker
+3. Using batch INSERT statements
+*/
 
--- Create the daily prices table
-CREATE TABLE daily_stock_prices (
-    price_id       INT AUTO_INCREMENT PRIMARY KEY,
-    trading_date   DATE NOT NULL,
-    ticker         VARCHAR(10) NOT NULL,
-    open_price     DECIMAL(10, 2),
-    high_price     DECIMAL(10, 2),
-    low_price      DECIMAL(10, 2),
-    close_price    DECIMAL(10, 2) NOT NULL,
-    adj_close      DECIMAL(10, 2),
-    volume         BIGINT,
+-- ============================================================================
+-- STEP 1: VERIFY TABLE STRUCTURE
+-- ============================================================================
 
-    INDEX idx_ticker_date (ticker, trading_date),
-    INDEX idx_date (trading_date)
-);
+-- Check that the table exists
+SHOW TABLES;
 
--- Create security info table
-CREATE TABLE security_info (
-    ticker           VARCHAR(10) PRIMARY KEY,
-    security_name    VARCHAR(100) NOT NULL,
-    current_percent  DECIMAL(5, 2) NOT NULL,
-    asset_class      VARCHAR(50) NOT NULL,
-    portfolio_value  DECIMAL(15, 2)
-);
+-- View table structure
+DESCRIBE daily_stock_prices;
 
--- Insert ticker information
-INSERT INTO security_info (ticker, security_name, current_percent, asset_class, portfolio_value) VALUES
-('IXN', 'iShares Global Tech ETF', 17.5, 'Equity', 16.625),
-('QQQ', 'NASDAQ 100', 22.1, 'Equity', 20.995),
-('IEF', 'iShares 7-10 Year Treasury Bond ETF', 28.5, 'Fixed Income', 27.075),
-('VNQ', 'Vanguard Real Estate ETF', 8.9, 'Real Assets', 8.455),
-('GLD', 'SPDR Gold Shares', 23.0, 'Commodities', 21.85);
+-- Clear previous data (if needed)
+-- DELETE FROM daily_stock_prices;
+-- TRUNCATE TABLE daily_stock_prices;
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- STEP 2: IMPORT DATA FROM CSV
--- ═══════════════════════════════════════════════════════════════════════════════
---
--- IMPORTANT: Change the file path below to match your actual file location
---
--- Examples:
---   Windows: C:/Users/YourName/Documents/All_ticker.csv
---   Mac: /Users/YourName/Documents/All_ticker.csv
---   Linux: /home/username/Documents/All_ticker.csv
---
--- Always use FORWARD SLASHES (/) even on Windows!
--- ═══════════════════════════════════════════════════════════════════════════════
 
--- METHOD 1: LOAD DATA LOCAL INFILE (RECOMMENDED - Fastest)
--- Change 'C:/path/to/All_ticker.csv' to your actual file path
+-- ============================================================================
+-- STEP 2: IMPORT MAIN DATA FILE (RECOMMENDED METHOD)
+-- ============================================================================
 
-LOAD DATA LOCAL INFILE 'C:/path/to/All_ticker.csv'
-INTO TABLE portfolio_db.daily_stock_prices
-FIELDS TERMINATED BY ','
-ENCLOSED BY '"'
-LINES TERMINATED BY '\n'
-IGNORE 1 ROWS
-(@trading_date, ticker, open_price, high_price, low_price, close_price, adj_close, @volume)
-SET
-    trading_date = STR_TO_DATE(@trading_date, '%d-%b-%y'),
-    volume = CAST(REPLACE(@volume, ',', '') AS UNSIGNED);
+-- This imports all ticker data from the pre-formatted SQL file
+-- This is the easiest and most reliable method
+SOURCE aligned_stock_prices.sql;
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- VERIFICATION QUERIES - Run these to confirm data imported correctly
--- ═══════════════════════════════════════════════════════════════════════════════
-
--- Check 1: Total records
-SELECT
-    COUNT(*) as total_records,
-    'Should be ~2500 rows' as expected
-FROM daily_stock_prices;
-
--- Check 2: Records per ticker
-SELECT
-    ticker,
-    COUNT(*) as record_count,
-    MIN(trading_date) as earliest_date,
-    MAX(trading_date) as latest_date,
-    'Should be ~502 per ticker' as expected
-FROM daily_stock_prices
-GROUP BY ticker
-ORDER BY ticker;
-
--- Check 3: Date range
-SELECT
-    MIN(trading_date) as earliest_date,
-    MAX(trading_date) as latest_date,
-    COUNT(DISTINCT trading_date) as unique_trading_days,
-    'Should be ~502 unique trading days' as expected
-FROM daily_stock_prices;
-
--- Check 4: Sample data (first 10 rows)
-SELECT * FROM daily_stock_prices LIMIT 10;
-
--- Check 5: All 5 tickers present
+-- Verify import was successful
+SELECT COUNT(*) as total_records FROM daily_stock_prices;
 SELECT DISTINCT ticker FROM daily_stock_prices ORDER BY ticker;
+SELECT ticker, COUNT(*) as record_count FROM daily_stock_prices GROUP BY ticker;
 
--- Check 6: Volume data (verify commas were removed)
-SELECT
-    ticker,
-    COUNT(*) as total_rows,
-    MIN(volume) as min_volume,
-    MAX(volume) as max_volume,
-    'Should be numbers, not text' as expected
-FROM daily_stock_prices
-WHERE volume IS NOT NULL
-GROUP BY ticker
-ORDER BY ticker;
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- IF LOAD DATA DOESN'T WORK - METHOD 2: ALTERNATIVE LOAD DATA
--- ═══════════════════════════════════════════════════════════════════════════════
--- Try this if the first LOAD DATA command fails
--- Change file path to match your location
+-- ============================================================================
+-- STEP 3: IMPORT ADDITIONAL SINGLE TICKER (IF NEEDED)
+-- ============================================================================
 
 /*
-LOAD DATA LOCAL INFILE 'C:/path/to/All_ticker.csv'
+If you want to add a single new ticker, follow this pattern:
+1. Prepare data in the correct format
+2. Create a separate SQL file or use INSERT statements
+3. Run the import
+
+Example for a new ticker 'AAPL':
+*/
+
+-- Example: Import data for AAPL (Apple)
+-- Save this in a file called aapl_data.sql or run directly:
+
+/*
+INSERT INTO daily_stock_prices (trading_date, ticker, open_price, high_price, low_price, close_price, adj_close, volume)
+VALUES
+  ('2026-06-18', 'AAPL', 225.50, 227.35, 224.80, 226.75, 226.75, 52500000),
+  ('2026-06-17', 'AAPL', 224.25, 226.50, 223.90, 225.10, 225.10, 48750000),
+  ('2026-06-16', 'AAPL', 226.10, 227.80, 225.45, 225.90, 225.90, 45200000);
+*/
+
+-- To import from a file:
+-- SOURCE aapl_data.sql;
+
+
+-- ============================================================================
+-- STEP 4: IMPORT MULTIPLE TICKERS FROM CSV (BATCH METHOD)
+-- ============================================================================
+
+/*
+If you have a CSV file with multiple tickers, use this approach:
+
+CSV Format (with header):
+trading_date,ticker,open_price,high_price,low_price,close_price,adj_close,volume
+2026-06-18,AAPL,225.50,227.35,224.80,226.75,226.75,52500000
+2026-06-17,AAPL,224.25,226.50,223.90,225.10,225.10,48750000
+2026-06-18,MSFT,435.80,438.50,434.20,437.25,437.25,28300000
+*/
+
+-- Import from CSV:
+LOAD DATA LOCAL INFILE '/path/to/all_tickers.csv'
 INTO TABLE daily_stock_prices
 FIELDS TERMINATED BY ','
-OPTIONALLY ENCLOSED BY '"'
-LINES TERMINATED BY '\n'
+ENCLOSED BY '"'
 IGNORE 1 ROWS
-(@trading_date, ticker, open_price, high_price, low_price, close_price, adj_close, @volume)
-SET
-    trading_date = STR_TO_DATE(@trading_date, '%d-%b-%y'),
-    volume = IF(@volume = '' OR @volume IS NULL, NULL, CAST(REPLACE(@volume, ',', '') AS UNSIGNED));
-*/
+(trading_date, ticker, open_price, high_price, low_price, close_price, adj_close, volume);
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- IF BOTH METHODS FAIL - METHOD 3: ENABLE LOCAL INFILE
--- ═══════════════════════════════════════════════════════════════════════════════
--- Run this if you get "LOAD DATA LOCAL is disabled" error
+-- Verify:
+SELECT COUNT(*) FROM daily_stock_prices;
+
+
+-- ============================================================================
+-- STEP 5: VALIDATE TICKER DATA
+-- ============================================================================
+
+-- List all unique tickers in database
+SELECT DISTINCT ticker FROM daily_stock_prices ORDER BY ticker;
+
+-- Count records per ticker
+SELECT ticker, COUNT(*) as record_count
+FROM daily_stock_prices
+GROUP BY ticker
+ORDER BY ticker;
+
+-- Get data statistics for all tickers
+SELECT
+    ticker,
+    COUNT(*) as days,
+    MIN(trading_date) as start_date,
+    MAX(trading_date) as end_date,
+    ROUND(MIN(low_price), 2) as low,
+    ROUND(MAX(high_price), 2) as high,
+    ROUND(AVG(close_price), 2) as avg_close
+FROM daily_stock_prices
+GROUP BY ticker
+ORDER BY ticker;
+
+
+-- ============================================================================
+-- STEP 6: SAMPLE QUERIES BY TICKER
+-- ============================================================================
+
+-- View recent prices for all tickers
+SELECT ticker, trading_date, open_price, high_price, low_price, close_price, volume
+FROM daily_stock_prices
+WHERE ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY trading_date DESC) <= 5
+ORDER BY ticker, trading_date DESC;
+
+-- Compare last close prices across all tickers
+SELECT
+    ticker,
+    trading_date,
+    close_price
+FROM daily_stock_prices
+WHERE ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY trading_date DESC) = 1
+ORDER BY ticker;
+
+-- Performance metrics for each ticker
+SELECT
+    ticker,
+    ROUND(MIN(close_price), 2) as lowest_price,
+    ROUND(MAX(close_price), 2) as highest_price,
+    ROUND(AVG(close_price), 2) as avg_price,
+    ROUND((MAX(close_price) - MIN(close_price)) / MIN(close_price) * 100, 2) as total_return_percent
+FROM daily_stock_prices
+GROUP BY ticker
+ORDER BY ticker;
+
+
+-- ============================================================================
+-- STEP 7: WORKING WITH SPECIFIC TICKERS
+-- ============================================================================
+
+-- All IXN records
+SELECT * FROM daily_stock_prices WHERE ticker = 'IXN' ORDER BY trading_date DESC LIMIT 20;
+
+-- All GLD records
+SELECT * FROM daily_stock_prices WHERE ticker = 'GLD' ORDER BY trading_date DESC LIMIT 20;
+
+-- Compare two specific tickers on the same day
+SELECT
+    a.trading_date,
+    'IXN' as ticker1,
+    ROUND(a.close_price, 2) as ixn_close,
+    'GLD' as ticker2,
+    ROUND(b.close_price, 2) as gld_close
+FROM daily_stock_prices a
+JOIN daily_stock_prices b
+ON a.trading_date = b.trading_date
+AND a.ticker = 'IXN'
+AND b.ticker = 'GLD'
+ORDER BY a.trading_date DESC
+LIMIT 20;
+
+
+-- ============================================================================
+-- STEP 8: BULK INSERT EXAMPLE (FOR SCRIPTING)
+-- ============================================================================
 
 /*
-SET GLOBAL local_infile = 1;
+If you're generating INSERT statements programmatically, use this pattern:
 
--- Then try the LOAD DATA command again
-LOAD DATA LOCAL INFILE 'C:/path/to/All_ticker.csv'
-INTO TABLE portfolio_db.daily_stock_prices
-FIELDS TERMINATED BY ','
-ENCLOSED BY '"'
-LINES TERMINATED BY '\n'
-IGNORE 1 ROWS
-(@trading_date, ticker, open_price, high_price, low_price, close_price, adj_close, @volume)
-SET
-    trading_date = STR_TO_DATE(@trading_date, '%d-%b-%y'),
-    volume = CAST(REPLACE(@volume, ',', '') AS UNSIGNED);
+INSERT INTO daily_stock_prices (trading_date, ticker, open_price, high_price, low_price, close_price, adj_close, volume)
+VALUES
+(date1, 'TICKER1', open1, high1, low1, close1, adj_close1, vol1),
+(date2, 'TICKER1', open2, high2, low2, close2, adj_close2, vol2),
+(date3, 'TICKER2', open3, high3, low3, close3, adj_close3, vol3),
+-- ... more rows ...
+;
+
+Key points:
+- Use NULL for unknown values (or provide a default)
+- Date must be YYYY-MM-DD format
+- Prices can have up to 2 decimal places
+- Volume should be integer
+- This approach is faster than individual inserts
 */
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- TROUBLESHOOTING QUERIES
--- ═══════════════════════════════════════════════════════════════════════════════
 
--- If data didn't import, check if table is empty
--- SELECT COUNT(*) FROM daily_stock_prices;
+-- ============================================================================
+-- STEP 9: TROUBLESHOOTING MULTI-TICKER IMPORTS
+-- ============================================================================
 
--- Check for NULL values
--- SELECT
---     COUNT(IF(trading_date IS NULL, 1, NULL)) as null_dates,
---     COUNT(IF(ticker IS NULL, 1, NULL)) as null_tickers,
---     COUNT(IF(close_price IS NULL, 1, NULL)) as null_close_prices,
---     COUNT(IF(volume IS NULL, 1, NULL)) as null_volumes
--- FROM daily_stock_prices;
+-- Problem: Duplicate entries
+-- Solution: Check for duplicates
+SELECT ticker, trading_date, COUNT(*)
+FROM daily_stock_prices
+GROUP BY ticker, trading_date
+HAVING COUNT(*) > 1;
 
--- Check latest data
--- SELECT * FROM daily_stock_prices ORDER BY trading_date DESC LIMIT 10;
+-- Problem: Missing tickers
+-- Solution: List expected vs actual
+SELECT DISTINCT ticker FROM daily_stock_prices ORDER BY ticker;
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- EXAMPLE RESULTS EXPECTED
--- ═══════════════════════════════════════════════════════════════════════════════
+-- Problem: Data type errors
+-- Solution: Check data types
+SELECT
+    'trading_date' as field,
+    COUNT(*) as rows,
+    COUNT(CASE WHEN trading_date IS NULL THEN 1 END) as nulls
+FROM daily_stock_prices
+UNION ALL
+SELECT
+    'ticker',
+    COUNT(*),
+    COUNT(CASE WHEN ticker IS NULL THEN 1 END)
+FROM daily_stock_prices
+UNION ALL
+SELECT
+    'close_price',
+    COUNT(*),
+    COUNT(CASE WHEN close_price IS NULL THEN 1 END)
+FROM daily_stock_prices;
 
--- After successful import, you should see:
---
--- Check 1 Result:
---   total_records: 2500 (approximately)
---
--- Check 2 Result:
---   GLD | 502 | 2024-06-21 | 2026-06-19
---   IEF | 502 | 2024-06-21 | 2026-06-19
---   IXN | 502 | 2024-06-21 | 2026-06-19
---   QQQ | 502 | 2024-06-21 | 2026-06-19
---   VNQ | 502 | 2024-06-21 | 2026-06-19
---
--- Check 3 Result:
---   earliest_date: 2024-06-21
---   latest_date: 2026-06-19
---   unique_trading_days: 502
---
--- Check 5 Result:
---   GLD
---   IEF
---   IXN
---   QQQ
---   VNQ
---
--- Check 6 Result (Sample):
---   ticker | total_rows | min_volume | max_volume
---   GLD    | 502        | 100000     | 5000000
---   IEF    | 502        | 50000      | 2000000
---   IXN    | 502        | 100000     | 4000000
---   QQQ    | 502        | 200000     | 6000000
---   VNQ    | 502        | 150000     | 3000000
+-- Problem: Price outliers
+-- Solution: Check ranges
+SELECT
+    ticker,
+    MIN(close_price) as min,
+    MAX(close_price) as max,
+    AVG(close_price) as avg
+FROM daily_stock_prices
+GROUP BY ticker;
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- SUCCESS! Data is now ready for analysis
--- ═══════════════════════════════════════════════════════════════════════════════
--- Now run the queries from: FRIEND_SQL_FOR_REAL_DATA.sql
+
+-- ============================================================================
+-- STEP 10: POST-IMPORT OPERATIONS
+-- ============================================================================
+
+-- Refresh indexes (for performance)
+OPTIMIZE TABLE daily_stock_prices;
+
+-- Count final records
+SELECT COUNT(*) as total_records FROM daily_stock_prices;
+
+-- Summary by ticker
+SELECT
+    ticker,
+    COUNT(*) as total_records,
+    MIN(trading_date) as first_date,
+    MAX(trading_date) as last_date,
+    COUNT(DISTINCT trading_date) as unique_days
+FROM daily_stock_prices
+GROUP BY ticker
+ORDER BY ticker;
+
+-- Data quality check
+SELECT
+    'Total Records' as metric,
+    COUNT(*) as value
+FROM daily_stock_prices
+UNION ALL
+SELECT 'Unique Tickers', COUNT(DISTINCT ticker)
+FROM daily_stock_prices
+UNION ALL
+SELECT 'Unique Dates', COUNT(DISTINCT trading_date)
+FROM daily_stock_prices
+UNION ALL
+SELECT 'NULL close_prices', COUNT(CASE WHEN close_price IS NULL THEN 1 END)
+FROM daily_stock_prices
+UNION ALL
+SELECT 'NULL tickers', COUNT(CASE WHEN ticker IS NULL THEN 1 END)
+FROM daily_stock_prices;
+
+
+-- ============================================================================
+-- STEP 11: ADDING NEW TICKERS LATER
+-- ============================================================================
+
+/*
+When you want to add a new ticker (e.g., MSFT):
+
+1. Prepare data file: msft_data.sql or msft_data.csv
+
+2. If using SQL file:
+   SOURCE msft_data.sql;
+
+3. If using CSV file:
+   LOAD DATA LOCAL INFILE '/path/to/msft_data.csv'
+   INTO TABLE daily_stock_prices
+   FIELDS TERMINATED BY ','
+   IGNORE 1 ROWS
+   (trading_date, ticker, open_price, high_price, low_price, close_price, adj_close, volume);
+
+4. Verify:
+   SELECT COUNT(*) FROM daily_stock_prices WHERE ticker = 'MSFT';
+
+5. Compare with other tickers:
+   SELECT ticker, COUNT(*) FROM daily_stock_prices GROUP BY ticker;
+*/
+
+
+-- ============================================================================
+-- QUICK REFERENCE - COMMON OPERATIONS
+-- ============================================================================
+
+/*
+Import all data:
+  SOURCE aligned_stock_prices.sql;
+
+View all tickers:
+  SELECT DISTINCT ticker FROM daily_stock_prices;
+
+Count by ticker:
+  SELECT ticker, COUNT(*) FROM daily_stock_prices GROUP BY ticker;
+
+Get recent prices:
+  SELECT * FROM daily_stock_prices ORDER BY trading_date DESC LIMIT 30;
+
+Compare tickers:
+  SELECT ticker, trading_date, close_price FROM daily_stock_prices WHERE ticker IN ('IXN', 'GLD');
+
+Delete all data:
+  DELETE FROM daily_stock_prices;
+
+Check data quality:
+  SELECT COUNT(*), COUNT(DISTINCT ticker), COUNT(DISTINCT trading_date) FROM daily_stock_prices;
+*/
+
+-- ============================================================================
+-- For more information, see:
+-- - FRIEND_DATA_IMPORT_GUIDE.md (detailed import instructions)
+-- - FRIEND_HOW_TO_RUN_IMPORT.md (quick start guide)
+-- - FRIEND_STEP_BY_STEP_GUIDE.md (complete tutorial)
+-- ============================================================================

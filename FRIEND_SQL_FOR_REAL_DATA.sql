@@ -1,499 +1,421 @@
--- ═══════════════════════════════════════════════════════════════════════════════
--- COMPLETE SQL FOR PORTFOLIO ANALYSIS - REAL DATA (2 YEARS)
--- Data: 21-Jun-2024 to 21-Jun-2026
--- File: All_ticker.csv
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ============================================================================
+-- FRIEND_SQL_FOR_REAL_DATA.sql
+-- Advanced SQL Queries for Stock Market Analysis
+-- ============================================================================
+-- Use these queries to analyze real stock market data in your
+-- daily_stock_prices table. These are production-ready queries!
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- STEP 1: CREATE DATABASE AND SCHEMA
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ============================================================================
+-- 1. TICKER OVERVIEW & SUMMARY
+-- ============================================================================
 
-CREATE DATABASE IF NOT EXISTS portfolio_db;
-USE portfolio_db;
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- TABLE 1: DAILY PRICES (with all OHLCV data)
--- ═══════════════════════════════════════════════════════════════════════════════
-
-DROP TABLE IF EXISTS daily_stock_prices;
-
-CREATE TABLE daily_stock_prices (
-    price_id       INT AUTO_INCREMENT PRIMARY KEY,
-    trading_date   DATE NOT NULL,
-    ticker         VARCHAR(10) NOT NULL,
-    open_price     DECIMAL(10, 2),
-    high_price     DECIMAL(10, 2),
-    low_price      DECIMAL(10, 2),
-    close_price    DECIMAL(10, 2) NOT NULL,
-    adj_close      DECIMAL(10, 2),
-    volume         BIGINT,
-
-    -- Indexes for faster queries
-    INDEX idx_ticker_date (ticker, trading_date),
-    INDEX idx_date (trading_date)
-);
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- TABLE 2: TICKER INFORMATION
--- ═══════════════════════════════════════════════════════════════════════════════
-
-DROP TABLE IF EXISTS security_info;
-
-CREATE TABLE security_info (
-    ticker           VARCHAR(10) PRIMARY KEY,
-    security_name    VARCHAR(100) NOT NULL,
-    current_percent  DECIMAL(5, 2) NOT NULL,
-    asset_class      VARCHAR(50) NOT NULL,
-    portfolio_value  DECIMAL(15, 2)  -- = current_percent * 95M / 100
-);
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- STEP 2: INSERT TICKER INFORMATION
--- ═══════════════════════════════════════════════════════════════════════════════
-
-INSERT INTO security_info (ticker, security_name, current_percent, asset_class, portfolio_value) VALUES
-('IXN', 'iShares Global Tech ETF', 17.5, 'Equity', 16.625),
-('QQQ', 'NASDAQ 100', 22.1, 'Equity', 20.995),
-('IEF', 'iShares 7-10 Year Treasury Bond ETF', 28.5, 'Fixed Income', 27.075),
-('VNQ', 'Vanguard Real Estate ETF', 8.9, 'Real Assets', 8.455),
-('GLD', 'SPDR Gold Shares', 23.0, 'Commodities', 21.85);
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- STEP 3: IMPORT DATA FROM CSV
--- ═══════════════════════════════════════════════════════════════════════════════
---
--- CSV FILE FORMAT:
--- Date,Ticker,Open,High,Low,Close ,Adj Close ,Volume
--- 18-Jun-26,IXN,145.03,146.63,144.49,146.33,146.33,"361,000"
---
--- METHOD 1: LOAD DATA from CSV (RECOMMENDED)
--- ═══════════════════════════════════════════════════════════════════════════════
---
--- IMPORTANT: In MySQL Workbench, use this command:
---
--- LOAD DATA LOCAL INFILE 'C:/path/to/All_ticker.csv'
--- INTO TABLE portfolio_db.daily_stock_prices
--- FIELDS TERMINATED BY ','
--- ENCLOSED BY '"'
--- LINES TERMINATED BY '\n'
--- IGNORE 1 ROWS
--- (@trading_date, ticker, open_price, high_price, low_price, close_price, adj_close, @volume)
--- SET
---     trading_date = STR_TO_DATE(@trading_date, '%d-%b-%y'),
---     volume = CAST(REPLACE(@volume, ',', '') AS UNSIGNED);
---
--- Note: The SET clause handles:
--- - Date conversion from DD-MMM-YY to DATE format
--- - Volume comma removal (361,000 → 361000)
---
--- ═══════════════════════════════════════════════════════════════════════════════
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- VERIFICATION QUERIES (Run after importing data)
--- ═══════════════════════════════════════════════════════════════════════════════
-
--- Check 1: Total records imported
-SELECT COUNT(*) as total_records FROM daily_stock_prices;
-
--- Check 2: Records per ticker (should be ~503 each for 2 years)
+-- Comprehensive ticker summary
 SELECT
     ticker,
-    COUNT(*) as record_count,
-    MIN(trading_date) as earliest_date,
-    MAX(trading_date) as latest_date
+    COUNT(*) as total_trading_days,
+    MIN(trading_date) as first_date,
+    MAX(trading_date) as last_date,
+    DATEDIFF(MAX(trading_date), MIN(trading_date)) as days_span,
+    ROUND(MIN(low_price), 2) as lowest_price,
+    ROUND(MAX(high_price), 2) as highest_price,
+    ROUND(AVG(close_price), 2) as avg_close,
+    ROUND(STDDEV(close_price), 2) as price_volatility,
+    ROUND(AVG(volume), 0) as avg_daily_volume
 FROM daily_stock_prices
 GROUP BY ticker
 ORDER BY ticker;
 
--- Check 3: Date range (should be 21-Jun-2024 to 21-Jun-2026)
+
+-- ============================================================================
+-- 2. PRICE STATISTICS
+-- ============================================================================
+
+-- Find the most expensive stock (by closing price)
 SELECT
-    MIN(trading_date) as earliest_date,
-    MAX(trading_date) as latest_date,
-    COUNT(DISTINCT trading_date) as unique_trading_days
-FROM daily_stock_prices;
+    trading_date,
+    ticker,
+    close_price
+FROM daily_stock_prices
+ORDER BY close_price DESC
+LIMIT 1;
 
--- Check 4: Sample data
-SELECT * FROM daily_stock_prices LIMIT 10;
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- QUESTION 1: RETURNS ANALYSIS (12M, 18M, 24M)
--- ═══════════════════════════════════════════════════════════════════════════════
---
--- WHAT: Calculate return on investment for different time periods
--- FORMULA: ((Current Price - Old Price) / Old Price) × 100%
--- TIME WINDOWS:
---   - 12M = 252 trading days (1 year)
---   - 18M = 378 trading days (1.5 years)
---   - 24M = 504 trading days (2 years)
---
--- NOTE: Using 2 years of data means we can calculate:
---   - 24M return (back to 21-Jun-2024)
---   - 18M return (back to 21-Dec-2024)
---   - 12M return (back to 21-Jun-2025)
--- ═══════════════════════════════════════════════════════════════════════════════
-
--- Get today's date and recent prices
-WITH today_prices AS (
-    SELECT ticker, close_price, trading_date
-    FROM daily_stock_prices
-    WHERE trading_date = (SELECT MAX(trading_date) FROM daily_stock_prices)
-),
-
--- Get prices from 12 months ago (252 trading days back)
-prices_12m_ago AS (
-    SELECT ticker, close_price, trading_date,
-           ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY trading_date DESC) as row_num
-    FROM daily_stock_prices
-    WHERE trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 12 MONTH)
-),
-
--- Get prices from 18 months ago (378 trading days back)
-prices_18m_ago AS (
-    SELECT ticker, close_price, trading_date,
-           ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY trading_date DESC) as row_num
-    FROM daily_stock_prices
-    WHERE trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 18 MONTH)
-),
-
--- Get prices from 24 months ago (504 trading days back)
-prices_24m_ago AS (
-    SELECT ticker, close_price, trading_date,
-           ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY trading_date DESC) as row_num
-    FROM daily_stock_prices
-    WHERE trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 24 MONTH)
-)
-
+-- Find the cheapest stock
 SELECT
-    s.ticker,
-    s.security_name,
-    s.current_percent,
+    trading_date,
+    ticker,
+    close_price
+FROM daily_stock_prices
+ORDER BY close_price ASC
+LIMIT 1;
 
-    -- 24-MONTH RETURN (since 21-Jun-2024)
-    ROUND(
-        ((t.close_price - p24.close_price) / p24.close_price) * 100,
-        2
-    ) as return_24m_pct,
-
-    -- 18-MONTH RETURN
-    ROUND(
-        ((t.close_price - p18.close_price) / p18.close_price) * 100,
-        2
-    ) as return_18m_pct,
-
-    -- 12-MONTH RETURN (since 21-Jun-2025)
-    ROUND(
-        ((t.close_price - p12.close_price) / p12.close_price) * 100,
-        2
-    ) as return_12m_pct
-
-FROM security_info s
-JOIN today_prices t ON s.ticker = t.ticker
-LEFT JOIN (SELECT * FROM prices_24m_ago WHERE row_num = 1) p24 ON s.ticker = p24.ticker
-LEFT JOIN (SELECT * FROM prices_18m_ago WHERE row_num = 1) p18 ON s.ticker = p18.ticker
-LEFT JOIN (SELECT * FROM prices_12m_ago WHERE row_num = 1) p12 ON s.ticker = p12.ticker
-
-ORDER BY return_24m_pct DESC;
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- QUESTION 2: VARIANCE ANALYSIS (Last 6 Months)
--- ═══════════════════════════════════════════════════════════════════════════════
---
--- WHAT: Measure how much daily returns vary (proxy for correlation)
--- HOW: Calculate daily return % and then variance of those returns
--- INTERPRETATION:
---   - High variance = bounces around (risky)
---   - Low variance = stable (safe)
--- ═══════════════════════════════════════════════════════════════════════════════
-
-WITH daily_returns AS (
-    SELECT
-        ticker,
-        trading_date,
-        close_price,
-        LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date) as prev_close,
-
-        -- Daily return = (Today - Yesterday) / Yesterday × 100
-        ROUND(
-            ((close_price - LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date))
-             / LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date)) * 100,
-            4
-        ) as daily_return_pct
-
-    FROM daily_stock_prices
-
-    -- Last 6 months only
-    WHERE trading_date >= DATE_SUB(
-        (SELECT MAX(trading_date) FROM daily_stock_prices),
-        INTERVAL 6 MONTH
-    )
-)
-
-SELECT
-    s.ticker,
-    s.security_name,
-    s.asset_class,
-
-    -- Variance (how spread out the returns are)
-    ROUND(VARIANCE(dr.daily_return_pct), 4) as variance,
-
-    -- Standard Deviation (another measure of volatility)
-    ROUND(STDDEV_POP(dr.daily_return_pct), 4) as std_deviation,
-
-    -- Average daily return
-    ROUND(AVG(dr.daily_return_pct), 4) as avg_daily_return_pct,
-
-    -- Number of data points
-    COUNT(*) as trading_days_analyzed
-
-FROM daily_returns dr
-JOIN security_info s ON dr.ticker = s.ticker
-
-WHERE dr.daily_return_pct IS NOT NULL
-
-GROUP BY dr.ticker, s.ticker, s.security_name, s.asset_class
-
-ORDER BY variance DESC;  -- Highest variance first (most risky)
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- QUESTION 3: SIGMA (ANNUALIZED VOLATILITY) - 12 MONTHS
--- ═══════════════════════════════════════════════════════════════════════════════
---
--- WHAT: Annual volatility (σ sigma) = how much price could swing in a year
--- FORMULA: Daily Volatility × √252 (trading days per year)
--- EXAMPLE: σ = 20% means price could swing ±20% in a year
---
--- RISK LEVELS:
---   σ > 25% = HIGH RISK
---   15% < σ < 25% = MODERATE RISK
---   σ < 15% = LOW RISK
--- ═══════════════════════════════════════════════════════════════════════════════
-
-WITH daily_returns AS (
-    SELECT
-        ticker,
-        trading_date,
-        close_price,
-        LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date) as prev_close,
-
-        ROUND(
-            ((close_price - LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date))
-             / LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date)) * 100,
-            4
-        ) as daily_return_pct
-
-    FROM daily_stock_prices
-
-    -- Last 12 months for annual volatility
-    WHERE trading_date >= DATE_SUB(
-        (SELECT MAX(trading_date) FROM daily_stock_prices),
-        INTERVAL 12 MONTH
-    )
-)
-
-SELECT
-    s.ticker,
-    s.security_name,
-    s.asset_class,
-
-    -- Daily volatility (standard deviation of daily returns)
-    ROUND(STDDEV_POP(dr.daily_return_pct), 4) as daily_volatility_pct,
-
-    -- Annualized volatility (SIGMA)
-    -- Formula: Daily Vol × √252 ≈ Daily Vol × 15.87
-    ROUND(STDDEV_POP(dr.daily_return_pct) * SQRT(252), 2) as annual_volatility_sigma_pct,
-
-    -- Risk classification
-    CASE
-        WHEN STDDEV_POP(dr.daily_return_pct) * SQRT(252) > 25 THEN 'HIGH RISK'
-        WHEN STDDEV_POP(dr.daily_return_pct) * SQRT(252) > 15 THEN 'MODERATE RISK'
-        ELSE 'LOW RISK'
-    END as risk_level,
-
-    -- Number of trading days analyzed
-    COUNT(*) as trading_days
-
-FROM daily_returns dr
-JOIN security_info s ON dr.ticker = s.ticker
-
-WHERE dr.daily_return_pct IS NOT NULL
-
-GROUP BY dr.ticker, s.ticker, s.security_name, s.asset_class
-
-ORDER BY annual_volatility_sigma_pct DESC;  -- Highest risk first
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- QUESTION 4: SHARPE RATIO (Risk-Adjusted Return Quality) - 12 MONTHS
--- ═══════════════════════════════════════════════════════════════════════════════
---
--- WHAT: "Return per unit of risk" - how much return for each unit of risk
--- FORMULA: (Annual Return - Risk-Free Rate) / Annual Volatility
--- RISK-FREE RATE: 2% (US Treasury bonds baseline)
---
--- INTERPRETATION:
---   Sharpe > 1.5 = Excellent (strong risk-adjusted return)
---   Sharpe > 1.0 = Very Good
---   Sharpe > 0.5 = Good
---   Sharpe > 0.2 = Acceptable
---   Sharpe ≤ 0.2 = Poor (questionable investment)
---
--- RECOMMENDATION LEVELS:
---   Sharpe > 0.8 = STRONG BUY
---   Sharpe > 0.5 = BUY
---   Sharpe > 0.2 = HOLD
---   Sharpe ≤ 0.2 = SELL
--- ═══════════════════════════════════════════════════════════════════════════════
-
-WITH daily_returns AS (
-    SELECT
-        ticker,
-        close_price,
-        LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date) as prev_close,
-
-        ROUND(
-            ((close_price - LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date))
-             / LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date)) * 100,
-            4
-        ) as daily_return_pct,
-
-        trading_date
-
-    FROM daily_stock_prices
-
-    WHERE trading_date >= DATE_SUB(
-        (SELECT MAX(trading_date) FROM daily_stock_prices),
-        INTERVAL 12 MONTH
-    )
-)
-
-SELECT
-    s.ticker,
-    s.security_name,
-    s.current_percent as current_allocation_pct,
-
-    -- Expected annual return (daily average × 252 trading days)
-    ROUND(AVG(dr.daily_return_pct) * 252, 2) as expected_annual_return_pct,
-
-    -- Annual volatility (sigma)
-    ROUND(STDDEV_POP(dr.daily_return_pct) * SQRT(252), 2) as annual_volatility_pct,
-
-    -- Sharpe ratio = (Return - Risk-Free) / Volatility
-    -- Risk-Free Rate = 2%
-    ROUND(
-        (AVG(dr.daily_return_pct) * 252 - 2) / (STDDEV_POP(dr.daily_return_pct) * SQRT(252)),
-        4
-    ) as sharpe_ratio,
-
-    -- Investment recommendation based on Sharpe ratio
-    CASE
-        WHEN (AVG(dr.daily_return_pct) * 252 - 2) / (STDDEV_POP(dr.daily_return_pct) * SQRT(252)) > 0.8 THEN 'STRONG BUY'
-        WHEN (AVG(dr.daily_return_pct) * 252 - 2) / (STDDEV_POP(dr.daily_return_pct) * SQRT(252)) > 0.5 THEN 'BUY'
-        WHEN (AVG(dr.daily_return_pct) * 252 - 2) / (STDDEV_POP(dr.daily_return_pct) * SQRT(252)) > 0.2 THEN 'HOLD'
-        ELSE 'SELL'
-    END as recommendation
-
-FROM daily_returns dr
-JOIN security_info s ON dr.ticker = s.ticker
-
-WHERE dr.daily_return_pct IS NOT NULL
-
-GROUP BY dr.ticker, s.ticker, s.security_name, s.current_percent
-
-ORDER BY sharpe_ratio DESC;  -- Best quality first
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- QUESTION 5: REBALANCING PROPOSAL
--- ═══════════════════════════════════════════════════════════════════════════════
---
--- BASED ON SHARPE RATIOS FROM Q4:
--- - Holdings with high Sharpe → INCREASE allocation (BUY)
--- - Holdings with low Sharpe → DECREASE allocation (SELL)
--- - Holdings with medium Sharpe → HOLD
---
--- PORTFOLIO: $95,000,000
--- ═══════════════════════════════════════════════════════════════════════════════
-
--- This is a manual proposal based on Q4 Sharpe ratios
--- Update the proposed_percent values based on your actual Q4 results
-
-SELECT
-    s.ticker,
-    s.security_name,
-    s.current_percent as current_allocation_pct,
-
-    -- EDIT THESE VALUES based on your Q4 Sharpe ratio findings
-    CASE
-        WHEN s.ticker = 'IXN' THEN 20.0   -- Increase if Sharpe > 1.5
-        WHEN s.ticker = 'QQQ' THEN 25.0   -- Increase if Sharpe > 1.0
-        WHEN s.ticker = 'GLD' THEN 22.0   -- Maintain or trim slightly
-        WHEN s.ticker = 'VNQ' THEN 18.0   -- Increase if underweighted
-        WHEN s.ticker = 'IEF' THEN 15.0   -- Reduce if Sharpe < 0.5
-    END as proposed_allocation_pct,
-
-    -- Calculate dollar amounts (based on $95M portfolio)
-    ROUND(
-        (CASE
-            WHEN s.ticker = 'IXN' THEN 20.0
-            WHEN s.ticker = 'QQQ' THEN 25.0
-            WHEN s.ticker = 'GLD' THEN 22.0
-            WHEN s.ticker = 'VNQ' THEN 18.0
-            WHEN s.ticker = 'IEF' THEN 15.0
-        END - s.current_percent) * 95 / 100,
-        1
-    ) as trade_amount_millions,
-
-    -- Action to take
-    CASE
-        WHEN CASE
-            WHEN s.ticker = 'IXN' THEN 20.0
-            WHEN s.ticker = 'QQQ' THEN 25.0
-            WHEN s.ticker = 'GLD' THEN 22.0
-            WHEN s.ticker = 'VNQ' THEN 18.0
-            WHEN s.ticker = 'IEF' THEN 15.0
-        END > s.current_percent THEN 'BUY'
-        WHEN CASE
-            WHEN s.ticker = 'IXN' THEN 20.0
-            WHEN s.ticker = 'QQQ' THEN 25.0
-            WHEN s.ticker = 'GLD' THEN 22.0
-            WHEN s.ticker = 'VNQ' THEN 18.0
-            WHEN s.ticker = 'IEF' THEN 15.0
-        END < s.current_percent THEN 'SELL'
-        ELSE 'HOLD'
-    END as action
-
-FROM security_info s
-
-ORDER BY s.ticker;
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- ADDITIONAL VERIFICATION QUERIES
--- ═══════════════════════════════════════════════════════════════════════════════
-
--- Check if all tickers have sufficient data
+-- Price categories by ticker
 SELECT
     ticker,
-    COUNT(*) as total_records,
-    COUNT(DISTINCT trading_date) as unique_dates,
-    MIN(trading_date) as earliest,
-    MAX(trading_date) as latest
+    COUNT(*) as count,
+    CASE
+        WHEN close_price < 50 THEN 'Under $50'
+        WHEN close_price BETWEEN 50 AND 100 THEN '$50-100'
+        WHEN close_price BETWEEN 100 AND 150 THEN '$100-150'
+        WHEN close_price BETWEEN 150 AND 200 THEN '$150-200'
+        ELSE 'Over $200'
+    END as price_range
+FROM daily_stock_prices
+GROUP BY ticker, price_range
+ORDER BY ticker, price_range;
+
+
+-- ============================================================================
+-- 3. VOLUME ANALYSIS
+-- ============================================================================
+
+-- Highest volume trading days (top 20)
+SELECT
+    trading_date,
+    ticker,
+    volume,
+    close_price,
+    (high_price - low_price) as daily_range
+FROM daily_stock_prices
+ORDER BY volume DESC
+LIMIT 20;
+
+-- Volume spikes (days with volume > 2x average for that ticker)
+SELECT
+    dp.trading_date,
+    dp.ticker,
+    dp.volume,
+    ROUND(avg_vol.avg_volume, 0) as avg_volume,
+    ROUND(dp.volume / avg_vol.avg_volume, 2) as volume_multiple
+FROM daily_stock_prices dp
+JOIN (
+    SELECT ticker, AVG(volume) as avg_volume
+    FROM daily_stock_prices
+    GROUP BY ticker
+) avg_vol ON dp.ticker = avg_vol.ticker
+WHERE dp.volume > avg_vol.avg_volume * 2
+ORDER BY dp.volume DESC
+LIMIT 30;
+
+-- Average volume by ticker (useful for liquidity analysis)
+SELECT
+    ticker,
+    ROUND(AVG(volume), 0) as avg_volume,
+    ROUND(STDDEV(volume), 0) as volume_std_dev,
+    MIN(volume) as min_volume,
+    MAX(volume) as max_volume
+FROM daily_stock_prices
+GROUP BY ticker
+ORDER BY avg_volume DESC;
+
+
+-- ============================================================================
+-- 4. PRICE MOVEMENT ANALYSIS
+-- ============================================================================
+
+-- Daily price changes (showing positive and negative moves)
+SELECT
+    trading_date,
+    ticker,
+    open_price,
+    close_price,
+    (close_price - open_price) as price_change,
+    ROUND((close_price - open_price) / open_price * 100, 2) as percent_change,
+    CASE
+        WHEN close_price > open_price THEN 'UP'
+        WHEN close_price < open_price THEN 'DOWN'
+        ELSE 'FLAT'
+    END as direction
+FROM daily_stock_prices
+ORDER BY trading_date DESC, ticker
+LIMIT 50;
+
+-- Count bullish and bearish days by ticker
+SELECT
+    ticker,
+    COUNT(CASE WHEN close_price > open_price THEN 1 END) as bullish_days,
+    COUNT(CASE WHEN close_price < open_price THEN 1 END) as bearish_days,
+    COUNT(CASE WHEN close_price = open_price THEN 1 END) as flat_days,
+    COUNT(*) as total_days,
+    ROUND(COUNT(CASE WHEN close_price > open_price THEN 1 END) / COUNT(*) * 100, 2) as bullish_percent
+FROM daily_stock_prices
+GROUP BY ticker
+ORDER BY bullish_percent DESC;
+
+-- Average gain on bullish days vs loss on bearish days
+SELECT
+    ticker,
+    ROUND(AVG(CASE WHEN close_price > open_price THEN (close_price - open_price) / open_price * 100 END), 2) as avg_daily_gain,
+    ROUND(AVG(CASE WHEN close_price < open_price THEN (close_price - open_price) / open_price * 100 END), 2) as avg_daily_loss
 FROM daily_stock_prices
 GROUP BY ticker
 ORDER BY ticker;
 
--- Check for NULL values
-SELECT
-    COUNT(*) as null_close_prices,
-    COUNT(IF(close_price IS NULL, 1, NULL)) as close_price_nulls,
-    COUNT(IF(volume IS NULL, 1, NULL)) as volume_nulls
-FROM daily_stock_prices;
 
--- Check latest prices
+-- ============================================================================
+-- 5. VOLATILITY & RANGE ANALYSIS
+-- ============================================================================
+
+-- Daily high-low spread (range)
+SELECT
+    trading_date,
+    ticker,
+    high_price,
+    low_price,
+    (high_price - low_price) as daily_range,
+    ROUND((high_price - low_price) / open_price * 100, 2) as range_percent
+FROM daily_stock_prices
+ORDER BY daily_range DESC
+LIMIT 20;
+
+-- Average volatility by ticker (intraday range)
 SELECT
     ticker,
-    MAX(trading_date) as latest_date,
-    MAX(close_price) as latest_close,
-    MIN(close_price) as min_close_12m,
-    MAX(close_price) as max_close_12m
+    COUNT(*) as trading_days,
+    ROUND(AVG(high_price - low_price), 2) as avg_daily_range,
+    ROUND(STDDEV(high_price - low_price), 2) as volatility,
+    ROUND(MAX(high_price - low_price), 2) as max_range,
+    ROUND(MIN(high_price - low_price), 2) as min_range
 FROM daily_stock_prices
-WHERE trading_date >= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 12 MONTH)
 GROUP BY ticker
-ORDER BY ticker;
+ORDER BY volatility DESC;
+
+-- Days with gap up (open > previous close)
+SELECT
+    a.trading_date,
+    a.ticker,
+    b.close_price as previous_close,
+    a.open_price as today_open,
+    (a.open_price - b.close_price) as gap,
+    ROUND((a.open_price - b.close_price) / b.close_price * 100, 2) as gap_percent
+FROM daily_stock_prices a
+JOIN daily_stock_prices b
+ON a.ticker = b.ticker
+AND DATE_ADD(b.trading_date, INTERVAL 1 DAY) = a.trading_date
+WHERE a.open_price > b.close_price
+ORDER BY gap DESC
+LIMIT 20;
+
+
+-- ============================================================================
+-- 6. TREND ANALYSIS
+-- ============================================================================
+
+-- Get closing price for last N days by ticker
+SELECT
+    ticker,
+    trading_date,
+    close_price,
+    ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY trading_date DESC) as days_ago
+FROM daily_stock_prices
+WHERE ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY trading_date DESC) <= 30
+ORDER BY ticker, trading_date DESC;
+
+-- Compare week-over-week prices
+SELECT
+    ticker,
+    WEEK(trading_date) as week,
+    MIN(close_price) as week_low,
+    MAX(close_price) as week_high,
+    AVG(close_price) as week_avg
+FROM daily_stock_prices
+GROUP BY ticker, WEEK(trading_date)
+ORDER BY ticker, WEEK(trading_date) DESC
+LIMIT 50;
+
+-- Monthly summary
+SELECT
+    ticker,
+    YEAR(trading_date) as year,
+    MONTH(trading_date) as month,
+    COUNT(*) as trading_days,
+    ROUND(MIN(low_price), 2) as month_low,
+    ROUND(MAX(high_price), 2) as month_high,
+    ROUND(AVG(close_price), 2) as month_avg,
+    ROUND(SUM(volume), 0) as total_volume
+FROM daily_stock_prices
+GROUP BY ticker, YEAR(trading_date), MONTH(trading_date)
+ORDER BY ticker, year DESC, month DESC;
+
+
+-- ============================================================================
+-- 7. CORRELATION & COMPARISON
+-- ============================================================================
+
+-- Compare price levels across tickers on same date
+SELECT
+    trading_date,
+    GROUP_CONCAT(CONCAT(ticker, ':', ROUND(close_price, 2)) SEPARATOR ' | ') as prices_by_ticker
+FROM daily_stock_prices
+GROUP BY trading_date
+ORDER BY trading_date DESC
+LIMIT 30;
+
+-- Price leaders and laggards (by percent change from date start)
+WITH first_day AS (
+    SELECT
+        ticker,
+        MIN(trading_date) as first_date,
+        MAX(CASE WHEN trading_date = MIN(trading_date) THEN close_price END) as first_close
+    FROM daily_stock_prices
+    GROUP BY ticker
+),
+last_day AS (
+    SELECT
+        ticker,
+        MAX(trading_date) as last_date,
+        MAX(CASE WHEN trading_date = MAX(trading_date) THEN close_price END) as last_close
+    FROM daily_stock_prices
+    GROUP BY ticker
+)
+SELECT
+    f.ticker,
+    f.first_close,
+    l.last_close,
+    ROUND((l.last_close - f.first_close), 2) as price_change,
+    ROUND((l.last_close - f.first_close) / f.first_close * 100, 2) as percent_change
+FROM first_day f
+JOIN last_day l ON f.ticker = l.ticker
+ORDER BY percent_change DESC;
+
+
+-- ============================================================================
+-- 8. OUTLIER DETECTION
+-- ============================================================================
+
+-- Find unusual price movements (> 2 standard deviations)
+SELECT
+    dp.trading_date,
+    dp.ticker,
+    dp.close_price,
+    ROUND(stats.avg_price, 2) as avg_price,
+    ROUND(stats.std_dev, 2) as std_dev,
+    ROUND((dp.close_price - stats.avg_price) / stats.std_dev, 2) as std_deviations
+FROM daily_stock_prices dp
+JOIN (
+    SELECT
+        ticker,
+        AVG(close_price) as avg_price,
+        STDDEV(close_price) as std_dev
+    FROM daily_stock_prices
+    GROUP BY ticker
+) stats ON dp.ticker = stats.ticker
+WHERE ABS((dp.close_price - stats.avg_price) / stats.std_dev) > 2
+ORDER BY ABS((dp.close_price - stats.avg_price) / stats.std_dev) DESC
+LIMIT 30;
+
+-- Find unusual volume days
+SELECT
+    dp.trading_date,
+    dp.ticker,
+    dp.volume,
+    ROUND(vol_stats.avg_vol, 0) as avg_volume,
+    ROUND(vol_stats.std_dev, 0) as std_dev,
+    ROUND(ABS(dp.volume - vol_stats.avg_vol) / vol_stats.std_dev, 2) as std_deviations
+FROM daily_stock_prices dp
+JOIN (
+    SELECT
+        ticker,
+        AVG(volume) as avg_vol,
+        STDDEV(volume) as std_dev
+    FROM daily_stock_prices
+    GROUP BY ticker
+) vol_stats ON dp.ticker = vol_stats.ticker
+WHERE ABS(dp.volume - vol_stats.avg_vol) / vol_stats.std_dev > 2
+ORDER BY ABS(dp.volume - vol_stats.avg_vol) / vol_stats.std_dev DESC
+LIMIT 30;
+
+
+-- ============================================================================
+-- 9. TRADING METRICS
+-- ============================================================================
+
+-- Calculate trading range and volume efficiency
+SELECT
+    trading_date,
+    ticker,
+    close_price,
+    (high_price - low_price) as intraday_range,
+    ROUND((high_price - low_price) / close_price * 100, 2) as range_percent,
+    volume,
+    ROUND(volume / (high_price - low_price + 0.01), 2) as volume_per_price_range
+FROM daily_stock_prices
+ORDER BY volume_per_price_range DESC
+LIMIT 30;
+
+-- Price efficiency ratio (trend strength)
+SELECT
+    ticker,
+    COUNT(*) as trading_days,
+    SUM(ABS(close_price - LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date))) as total_movement,
+    ABS(MAX(close_price) - MIN(close_price)) as net_change,
+    ROUND(ABS(MAX(close_price) - MIN(close_price)) / 
+          SUM(ABS(close_price - LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date))) * 100, 2) as efficiency_ratio
+FROM daily_stock_prices
+GROUP BY ticker;
+
+
+-- ============================================================================
+-- 10. PERFORMANCE METRICS
+-- ============================================================================
+
+-- Return analysis (best performing days)
+SELECT
+    ticker,
+    trading_date,
+    close_price,
+    LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date) as previous_close,
+    ROUND((close_price - LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date)) /
+          LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date) * 100, 2) as daily_return
+FROM daily_stock_prices
+WHERE LAG(close_price) OVER (PARTITION BY ticker ORDER BY trading_date) IS NOT NULL
+ORDER BY daily_return DESC
+LIMIT 30;
+
+-- Cumulative performance by ticker (from earliest to latest date)
+SELECT
+    ticker,
+    COUNT(*) as days_data,
+    ROUND(MIN(close_price), 2) as lowest_close,
+    ROUND(MAX(close_price), 2) as highest_close,
+    ROUND(MAX(close_price) - MIN(close_price), 2) as total_movement,
+    ROUND((MAX(close_price) - MIN(close_price)) / MIN(close_price) * 100, 2) as total_return_percent
+FROM daily_stock_prices
+GROUP BY ticker
+ORDER BY total_return_percent DESC;
+
+
+-- ============================================================================
+-- 11. QUICK INSIGHTS
+-- ============================================================================
+
+-- Recent price momentum (last 10 days vs previous 10 days average)
+SELECT
+    ticker,
+    ROUND(AVG(CASE WHEN ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY trading_date DESC) <= 10 
+                   THEN close_price END), 2) as recent_10day_avg,
+    ROUND(AVG(CASE WHEN ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY trading_date DESC) BETWEEN 11 AND 20
+                   THEN close_price END), 2) as previous_10day_avg
+FROM daily_stock_prices
+GROUP BY ticker;
+
+-- Current status (latest price vs 52-week high/low)
+SELECT
+    ticker,
+    MAX(CASE WHEN ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY trading_date DESC) = 1
+             THEN close_price END) as current_price,
+    MAX(close_price) as year_high,
+    MIN(close_price) as year_low,
+    ROUND(((MAX(CASE WHEN ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY trading_date DESC) = 1
+                     THEN close_price END) - MIN(close_price)) /
+           (MAX(close_price) - MIN(close_price)) * 100), 2) as price_percentile
+FROM daily_stock_prices
+GROUP BY ticker;
+
+-- ============================================================================
+-- TIPS:
+-- 1. Use LIMIT when running exploratory queries
+-- 2. Run summary queries first to understand data scope
+-- 3. Use these as templates for your own analysis
+-- 4. Combine queries to answer specific business questions
+-- 5. Consider indexing on ticker and trading_date for performance
+-- ============================================================================
