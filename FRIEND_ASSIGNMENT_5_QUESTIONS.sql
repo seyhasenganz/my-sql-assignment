@@ -53,10 +53,10 @@ SELECT
         (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
         -
         (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 730 DAY)
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 727 DAY)
          ORDER BY trading_date DESC LIMIT 1)
     ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 730 DAY)
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 727 DAY)
          ORDER BY trading_date DESC LIMIT 1), 2) as return_24m_pct
 
 FROM security_info si
@@ -89,10 +89,10 @@ SELECT
         (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
         -
         (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 730 DAY)
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 727 DAY)
          ORDER BY trading_date DESC LIMIT 1)
     ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 730 DAY)
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 727 DAY)
          ORDER BY trading_date DESC LIMIT 1), 2)), 2) as portfolio_return_24m_pct
 FROM security_info si;
 
