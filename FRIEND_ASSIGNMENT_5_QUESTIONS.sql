@@ -7,58 +7,58 @@ USE portfolio_db;
 
 -- ============================================================================
 -- QUESTION 1 (20 POINTS): RETURNS ANALYSIS
--- What is the most recent 12M, 18M, 24M (or 3M, 6M, 12M) return 
+-- What is the most recent 12M, 18M, 24M return
 -- for each security AND for the entire portfolio?
 -- ============================================================================
 
 -- SECTION 1.1: Get Current Latest Date
-SELECT 
+SELECT
     MAX(trading_date) as latest_date
 FROM daily_stock_prices;
 
--- SECTION 1.6: CALCULATE 3M, 6M, 12M RETURNS FOR EACH SECURITY
+-- SECTION 1.6: CALCULATE 12M, 18M, 24M RETURNS FOR EACH SECURITY
 SELECT
     si.ticker,
     si.security_name,
     si.asset_class,
     si.current_percent,
-    
-    ROUND((SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
+
+    ROUND((SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
            ORDER BY trading_date DESC LIMIT 1), 2) as current_price,
-    
-    -- 3-Month Return
-    ROUND(100 * (
-        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
-        - 
-        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 90 DAY)
-         ORDER BY trading_date DESC LIMIT 1)
-    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 90 DAY)
-         ORDER BY trading_date DESC LIMIT 1), 2) as return_3m_pct,
-    
-    -- 6-Month Return
-    ROUND(100 * (
-        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
-        - 
-        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
-         ORDER BY trading_date DESC LIMIT 1)
-    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
-         ORDER BY trading_date DESC LIMIT 1), 2) as return_6m_pct,
-    
+
     -- 12-Month Return
     ROUND(100 * (
         (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
-        - 
-        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
+        -
+        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
          AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
          ORDER BY trading_date DESC LIMIT 1)
-    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
+    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
          AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
-         ORDER BY trading_date DESC LIMIT 1), 2) as return_12m_pct
-    
+         ORDER BY trading_date DESC LIMIT 1), 2) as return_12m_pct,
+
+    -- 18-Month Return
+    ROUND(100 * (
+        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
+        -
+        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 548 DAY)
+         ORDER BY trading_date DESC LIMIT 1)
+    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 548 DAY)
+         ORDER BY trading_date DESC LIMIT 1), 2) as return_18m_pct,
+
+    -- 24-Month Return
+    ROUND(100 * (
+        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
+        -
+        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 730 DAY)
+         ORDER BY trading_date DESC LIMIT 1)
+    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 730 DAY)
+         ORDER BY trading_date DESC LIMIT 1), 2) as return_24m_pct
+
 FROM security_info si
 ORDER BY si.current_percent DESC;
 
@@ -67,33 +67,33 @@ SELECT
     'ENTIRE PORTFOLIO' as portfolio_level,
     ROUND(AVG(ROUND(100 * (
         (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
-        - 
-        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 90 DAY)
-         ORDER BY trading_date DESC LIMIT 1)
-    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 90 DAY)
-         ORDER BY trading_date DESC LIMIT 1), 2)), 2) as portfolio_return_3m_pct,
-    
-    ROUND(AVG(ROUND(100 * (
-        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
-        - 
-        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
-         ORDER BY trading_date DESC LIMIT 1)
-    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
-         ORDER BY trading_date DESC LIMIT 1), 2)), 2) as portfolio_return_6m_pct,
-    
-    ROUND(AVG(ROUND(100 * (
-        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
-        - 
-        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
+        -
+        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
          AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
          ORDER BY trading_date DESC LIMIT 1)
-    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
+    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
          AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
-         ORDER BY trading_date DESC LIMIT 1), 2)), 2) as portfolio_return_12m_pct
+         ORDER BY trading_date DESC LIMIT 1), 2)), 2) as portfolio_return_12m_pct,
+
+    ROUND(AVG(ROUND(100 * (
+        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
+        -
+        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 548 DAY)
+         ORDER BY trading_date DESC LIMIT 1)
+    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 548 DAY)
+         ORDER BY trading_date DESC LIMIT 1), 2)), 2) as portfolio_return_18m_pct,
+
+    ROUND(AVG(ROUND(100 * (
+        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
+        -
+        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 730 DAY)
+         ORDER BY trading_date DESC LIMIT 1)
+    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 730 DAY)
+         ORDER BY trading_date DESC LIMIT 1), 2)), 2) as portfolio_return_24m_pct
 FROM security_info si;
 
 
