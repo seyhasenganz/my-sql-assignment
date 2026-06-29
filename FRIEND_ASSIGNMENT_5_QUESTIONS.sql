@@ -166,38 +166,38 @@ ORDER BY avg_variance_by_asset_class DESC;
 
 
 -- ============================================================================
--- QUESTION 3 (20 POINTS): VOLATILITY/SIGMA (RISK) ANALYSIS - FIXED
+-- QUESTION 3 (20 POINTS): VOLATILITY/SIGMA (RISK) ANALYSIS - 12M
 -- ============================================================================
 
--- SECTION 3.2: SIMPLE VOLATILITY FOR EACH SECURITY (NO WINDOW FUNCTIONS)
+-- SECTION 3.2: VOLATILITY FOR EACH SECURITY (12-MONTH PERIOD)
 SELECT
     si.ticker,
     si.security_name,
     si.asset_class,
     si.current_percent,
-    
-    ROUND(100 * (MAX(dp.close_price) - MIN(dp.close_price)) / AVG(dp.close_price), 2) as volatility_6m_pct,
-    
+
+    ROUND(100 * (MAX(dp.close_price) - MIN(dp.close_price)) / AVG(dp.close_price), 2) as volatility_12m_pct,
+
     ROUND(MAX(dp.close_price) - MIN(dp.close_price), 2) as price_range,
-    
+
     ROUND(AVG(dp.close_price), 2) as avg_price,
-    
+
     ROUND(MIN(dp.close_price), 2) as min_price,
     ROUND(MAX(dp.close_price), 2) as max_price,
-    
+
     COUNT(DISTINCT dp.trading_date) as num_days
-    
+
 FROM daily_stock_prices dp
 JOIN security_info si ON dp.ticker = si.ticker
-WHERE dp.trading_date >= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
+WHERE dp.trading_date >= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
 GROUP BY si.ticker, si.security_name, si.asset_class, si.current_percent
-ORDER BY volatility_6m_pct DESC;
+ORDER BY volatility_12m_pct DESC;
 
 
--- SECTION 3.3: PORTFOLIO-LEVEL VOLATILITY (SIMPLE)
+-- SECTION 3.3: PORTFOLIO-LEVEL VOLATILITY (12-MONTH PERIOD)
 SELECT
     'ENTIRE PORTFOLIO' as portfolio_name,
-    ROUND(AVG(ROUND(100 * (MAX_PRICE - MIN_PRICE) / AVG_PRICE, 2)), 2) as portfolio_volatility_avg_pct,
+    ROUND(AVG(ROUND(100 * (MAX_PRICE - MIN_PRICE) / AVG_PRICE, 2)), 2) as portfolio_volatility_12m_pct,
     100 as total_allocation
 FROM (
     SELECT
@@ -208,104 +208,104 @@ FROM (
         AVG(dp.close_price) as AVG_PRICE
     FROM daily_stock_prices dp
     JOIN security_info si ON dp.ticker = si.ticker
-    WHERE dp.trading_date >= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
+    WHERE dp.trading_date >= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
     GROUP BY si.ticker, si.current_percent
 ) volatility_data;
 
 
 -- ============================================================================
--- QUESTION 4 (20 POINTS): RECOMMENDATIONS - BUY/SELL/HOLD - FIXED
+-- QUESTION 4 (20 POINTS): RECOMMENDATIONS - BUY/SELL/HOLD
 -- ============================================================================
 
--- SECTION 4.1: COMPREHENSIVE ANALYSIS FOR RECOMMENDATIONS
+-- SECTION 4.1: COMPREHENSIVE ANALYSIS FOR RECOMMENDATIONS (12M RETURNS & 12M VOLATILITY)
 SELECT
     si.ticker,
     si.security_name,
     si.current_percent,
-    
+
     ROUND(100 * (
         (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
-        - 
-        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
+        -
+        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
          ORDER BY trading_date DESC LIMIT 1)
-    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
-         ORDER BY trading_date DESC LIMIT 1), 2) as return_6m_pct,
-    
+    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
+         ORDER BY trading_date DESC LIMIT 1), 2) as return_12m_pct,
+
     ROUND(100 * (
-        (SELECT MAX(close_price) FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date >= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY))
-        - 
-        (SELECT MIN(close_price) FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date >= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY))
-    ) / (SELECT AVG(close_price) FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date >= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)), 2) as volatility_6m_pct
-    
+        (SELECT MAX(close_price) FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date >= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY))
+        -
+        (SELECT MIN(close_price) FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date >= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY))
+    ) / (SELECT AVG(close_price) FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date >= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)), 2) as volatility_12m_pct
+
 FROM security_info si
 ORDER BY si.current_percent DESC;
 
 
--- SECTION 4.2: RECOMMENDATION DECISION MATRIX
+-- SECTION 4.2: RECOMMENDATION DECISION MATRIX (12-MONTH RETURNS)
 SELECT
     si.ticker,
     si.security_name,
     si.current_percent as current_allocation,
-    
+
     ROUND(100 * (
         (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
-        - 
-        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
+        -
+        (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
          ORDER BY trading_date DESC LIMIT 1)
-    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
-         ORDER BY trading_date DESC LIMIT 1), 2) as return_6m_pct,
-    
+    ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+         AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
+         ORDER BY trading_date DESC LIMIT 1), 2) as return_12m_pct,
+
     CASE
         WHEN ROUND(100 * (
             (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
-            - 
-            (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
+            -
+            (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
              ORDER BY trading_date DESC LIMIT 1)
-        ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
+        ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
              ORDER BY trading_date DESC LIMIT 1), 2) > 10 THEN 'BUY - STRONG PERFORMER'
-        
+
         WHEN ROUND(100 * (
             (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
-            - 
-            (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
+            -
+            (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
              ORDER BY trading_date DESC LIMIT 1)
-        ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
+        ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
              ORDER BY trading_date DESC LIMIT 1), 2) BETWEEN 5 AND 10 THEN 'HOLD - GOOD PERFORMER'
-        
+
         WHEN ROUND(100 * (
             (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
-            - 
-            (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
+            -
+            (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
              ORDER BY trading_date DESC LIMIT 1)
-        ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
+        ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
              ORDER BY trading_date DESC LIMIT 1), 2) BETWEEN 0 AND 5 THEN 'HOLD - STABLE'
-        
+
         WHEN ROUND(100 * (
             (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker ORDER BY trading_date DESC LIMIT 1)
-            - 
-            (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
+            -
+            (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
              ORDER BY trading_date DESC LIMIT 1)
-        ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker 
-             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 180 DAY)
+        ) / (SELECT close_price FROM daily_stock_prices WHERE ticker = si.ticker
+             AND trading_date <= DATE_SUB((SELECT MAX(trading_date) FROM daily_stock_prices), INTERVAL 365 DAY)
              ORDER BY trading_date DESC LIMIT 1), 2) < 0 THEN 'SELL - UNDERPERFORMER'
-        
+
         ELSE 'REVIEW'
     END as recommendation
-    
+
 FROM security_info si
 ORDER BY si.current_percent DESC;
 
