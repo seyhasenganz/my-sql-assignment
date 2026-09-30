@@ -1,504 +1,469 @@
-# =====================================================================
-# Flight & Weather Delay Analysis - full Python code (Google Colab)
-# HOW TO USE:
-#   1. Easiest: open Flight_Weather_Delay_Analysis.ipynb in Colab (same code + narrative).
-#   2. Or: new Colab notebook, upload Flight.csv and weather.csv (folder icon, left),
-#      paste each CELL below into its own code cell, in order, and run.
-#   Optional: also upload Flight_and_Weather_-_working.xlsx and CELL 4 confirms
-#   the Python join matches your Excel VLOOKUP (1,769 unmatched).
-# =====================================================================
+# Flight & Weather Delay Analysis - all code from Flight_Weather_Delay_Analysis.ipynb
+# Upload Flight.csv and weather.csv to Colab, then run each CELL in order.
 
-# ===== CELL 1: SETUP - imports and chart style =====
-# ---- Imports ----
-import os
-import numpy as np
+# ===== CELL 1 | 0. Setup =====
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mtick
 import seaborn as sns
 from scipy import stats
 import statsmodels.formula.api as smf
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, roc_auc_score, roc_curve
 
-import warnings
-warnings.filterwarnings("ignore")
+# ===== CELL 2 | 1. The data =====
+# Upload Flight.csv and weather.csv to Colab first (folder icon on the left)
 
-# ---- Chart style: one consistent, colorblind-checked palette across the notebook ----
-BLUE, ORANGE, AQUA, GREY = "#2a78d6", "#eb6834", "#1baf7a", "#8a8984"
-INK, INK2 = "#0b0b0b", "#52514e"
-plt.rcParams.update({
-    "figure.dpi": 110, "figure.facecolor": "white", "axes.facecolor": "white",
-    "axes.edgecolor": "#c9c8c3", "axes.labelcolor": INK2, "axes.titleweight": "bold",
-    "axes.titlesize": 12, "axes.titlecolor": INK, "axes.spines.top": False, "axes.spines.right": False,
-    "axes.grid": True, "grid.color": "#ecebe8", "grid.linewidth": 0.8, "axes.axisbelow": True,
-    "xtick.color": INK2, "ytick.color": INK2, "legend.frameon": False, "font.size": 10,
-})
-pd.set_option("display.float_format", lambda v: f"{v:,.2f}")
-RNG = np.random.default_rng(42)
+df_flights = pd.read_csv('Flight.csv')
 
-# ===== CELL 2: LOAD both raw CSV files (Flight.csv, weather.csv) =====
-# ---- Load both raw CSV files exactly as exported from Excel ----
-# In Colab: upload Flight.csv and weather.csv via the file panel, or run this cell and pick both files.
-FILES = ["Flight.csv", "weather.csv"]
-if not all(os.path.exists(f) for f in FILES):
-    try:
-        from google.colab import files
-        print("Please upload Flight.csv and weather.csv")
-        files.upload()
-    except ImportError:
-        raise FileNotFoundError("Put Flight.csv and weather.csv in the same folder as this notebook.")
+# weather.csv has an extra row of column numbers (1, 2, 3 ... 16) above the real header
+# header=1 tells pandas the real column names are on the second row
+df_weather = pd.read_csv('weather.csv', header=1)
 
-# encoding="utf-8-sig" strips the invisible Excel byte-order mark from the first column name
-flights_raw = pd.read_csv("Flight.csv", encoding="utf-8-sig")
-# weather.csv has a junk first row (column numbers 1..16); the real header is on row 2
-weather_raw = pd.read_csv("weather.csv", encoding="utf-8-sig", header=1)
+print('Flights:', df_flights.shape)
+print('Weather:', df_weather.shape)
 
-print(f"Flight.csv : {flights_raw.shape[0]:,} rows x {flights_raw.shape[1]} columns")
-print(f"weather.csv: {weather_raw.shape[0]:,} rows x {weather_raw.shape[1]} columns")
-display(flights_raw.head(3))
-display(weather_raw.head(3))
+# ===== CELL 3 | 1. The data =====
+df_flights.head()
 
-# ===== CELL 3: LOAD - fix export problems + check keys =====
-# ---- Load-time fixes (logged in the cleaning table later) ----
-empty_cols = [c for c in flights_raw.columns if flights_raw[c].isna().all()]
-print(f"Flight.csv has {len(empty_cols)} completely empty columns left over from Excel -> dropped: {empty_cols}")
-flights = flights_raw.drop(columns=empty_cols)
+# ===== CELL 4 | 1. The data =====
+df_weather.head()
 
-# 'date' repeats year/month/day/hour as text, so it is redundant
-weather = weather_raw.drop(columns=["date"])
+# ===== CELL 5 | 1. The data =====
+# Flight.csv has 9 empty columns left over from Excel (Unnamed: 17 ... Unnamed: 25)
+print(df_flights.isnull().sum())
 
-# Sanity checks on the keys we built in Excel
-KEYS = ["origin", "year", "month", "day", "hour"]
-rebuilt = weather["origin"] + "-" + weather[KEYS[1:]].astype(str).agg("-".join, axis=1)
-print("Key_Weather matches origin-year-month-day-hour on every row:", (rebuilt == weather["Key_Weather"]).all())
-print("Duplicate weather keys:", weather["Key_Weather"].duplicated().sum())
-cover = weather.groupby("origin").size()
-print(f"Weather hours per airport: {cover.to_dict()} (a full year is 8,760) -> "
-      f"{(8760 - cover).to_dict()} hours missing")
-dates = pd.to_datetime(weather[["year", "month", "day"]])
-print(f"Weather runs {dates.min():%d %b} to {dates.max():%d %b %Y}; flights run to 31 Dec -> 31 Dec has no weather at all")
+# ===== CELL 6 | 1. The data =====
+# Drop columns where every value is missing
+df_flights = df_flights.dropna(axis=1, how='all')
 
-# ===== CELL 4: REQ 1 - JOIN flights to weather (left join on Excel key, like VLOOKUP) =====
-# ---- Join: LEFT join flights -> weather on the key built in Excel (same logic as our VLOOKUP) ----
-# Key_Flight / Key_Weather = origin-year-month-day-hour, e.g. "SEA-2014-1-1-0"; cancelled flights have hour "NA"
-df = flights.merge(weather.drop(columns=KEYS), left_on="Key_Flight", right_on="Key_Weather",
-                   how="left", indicator=True, validate="many_to_one")   # many flights -> one weather hour
-assert len(df) == len(flights), "join changed the number of flights"
+# 'date' in the weather file repeats year, month, day and hour, so we do not need it
+df_weather = df_weather.drop(columns='date')
 
-matched = (df["_merge"] == "both")
-print(f"Flights in:            {len(flights):,}")
-print(f"Matched to weather:    {matched.sum():,} ({matched.mean():.1%})")
-print(f"No weather match:      {(~matched).sum():,} ({(~matched).mean():.1%})")
-print(f"Weather hours never used (no departures that hour, mostly overnight): {len(weather) - df['Key_Weather'].nunique():,}")
+print('Flights:', df_flights.shape)
+print('Weather:', df_weather.shape)
 
-# Cross-check 1: joining on the five separate columns gives the same answer as the text key
-check = flights.merge(weather.assign(hour=weather["hour"].astype(float))[KEYS].assign(found=1), on=KEYS, how="left")
-print("Multi-column join gives identical matches:", check["found"].notna().sum() == matched.sum())
+# ===== CELL 7 | 2. Combining the sources =====
+# Is each weather hour listed only once? If not, the join would duplicate flights
+print('Duplicate weather keys:', df_weather['Key_Weather'].duplicated().sum())
 
-# Cross-check 2 (optional): our Excel VLOOKUP result, if the workbook is uploaded too
-EXCEL = "Flight_and_Weather_-_working.xlsx"
-if os.path.exists(EXCEL):
-    xl_miss = pd.read_excel(EXCEL).iloc[:, -1].isna().sum()   # last column = key returned by VLOOKUP (blank = no match)
-    print(f"Excel VLOOKUP left {xl_miss:,} flights without weather -> Python agrees: {xl_miss == (~matched).sum()}")
-df = df.drop(columns=["Key_Flight", "Key_Weather"])
+# How many hours of weather does each airport have? A full year is 365 x 24 = 8,760
+print(df_weather.groupby('origin').size())
 
-# ===== CELL 5: REQ 1 - what the join cost: unmatched rows and what they have in common =====
-# ---- Do the unmatched rows have anything in common? ----
-um = df[~matched].copy()
-um["reason"] = np.select(
-    [um["dep_time"].isna(), um["hour"].eq(24)],
-    ["Cancelled (no departure hour)", "Departed at 24:00 (hour=24)"],
-    default="Weather hour missing",
-)
-reason_tbl = um["reason"].value_counts().rename("flights").to_frame()
-reason_tbl["share_of_unmatched"] = reason_tbl["flights"] / len(um)
-display(reason_tbl)
+# ===== CELL 8 | 2. Combining the sources =====
+# Left join: keep every flight, add weather where the key matches
+# Key_Flight and Key_Weather = origin-year-month-day-hour, e.g. SEA-2014-1-1-0 (same key as our Excel VLOOKUP)
+# We only bring across the weather measurements - origin, year, month, day and hour are already in the flight file
 
-gaps = um[um["reason"] == "Weather hour missing"]
-gap_dates = (gaps.assign(date=pd.to_datetime(gaps[["year", "month", "day"]]))
-                 .groupby("date").size().sort_values(ascending=False))
-print(f"Weather-gap flights fall on {gap_dates.size} dates; top 5 dates hold {gap_dates.head(5).sum() / gap_dates.sum():.0%} of them")
-print("Unmatched share by airport:", (~matched).groupby(df["origin"]).mean().round(4).to_dict())
+weather_cols = ['Key_Weather', 'temp', 'dewp', 'humid', 'wind_dir', 'wind_speed',
+                'wind_gust', 'precip', 'pressure', 'visib']
 
-fig, axes = plt.subplots(1, 2, figsize=(12, 3.8))
-reason_tbl["flights"].sort_values().plot.barh(ax=axes[0], color=[GREY, BLUE, ORANGE][:len(reason_tbl)], width=0.6)
-axes[0].set_title("Why 1.1% of flights got no weather")
-axes[0].set_xlabel("Flights"); axes[0].set_ylabel("")
-for i, v in enumerate(reason_tbl["flights"].sort_values()):
-    axes[0].text(v + 10, i, f"{v:,}", va="center", color=INK2)
-top = gap_dates.head(10).sort_values()
-axes[1].barh(top.index.strftime("%d %b"), top.values, color=ORANGE, height=0.6)
-axes[1].set_title("Weather gaps cluster on a few dates")
-axes[1].set_xlabel("Flights without weather")
-plt.tight_layout(); plt.show()
+df = pd.merge(df_flights,
+              df_weather[weather_cols],
+              left_on='Key_Flight',
+              right_on='Key_Weather',
+              how='left')
 
-# ===== CELL 6: REQ 2 - what the data contains + missing values =====
-# ---- What does the combined table contain? ----
-print(f"{df.shape[0]:,} rows, {df.shape[1]-1} columns | {df['origin'].nunique()} origins, "
-      f"{df['dest'].nunique()} destinations, {df['carrier'].nunique()} carriers, year {df['year'].unique()}")
-display(df.drop(columns="_merge").describe().T[["count", "mean", "50%", "min", "max"]])
+print('Flights before join:', len(df_flights))
+print('Rows after join:    ', len(df))
 
-# ---- Missing values ----
-miss = df.drop(columns="_merge").isna().mean().sort_values(ascending=False)
-miss = miss[miss > 0]
-fig, ax = plt.subplots(figsize=(9, 3.8))
-ax.barh(miss.index[::-1], miss.values[::-1], color=BLUE, height=0.6)
-ax.xaxis.set_major_formatter(mtick.PercentFormatter(1))
-ax.set_title("Share of missing values by column")
-for i, v in enumerate(miss.values[::-1]):
-    ax.text(v + 0.002, i, f"{v:.1%}", va="center", fontsize=8, color=INK2)
-plt.tight_layout(); plt.show()
+# ===== CELL 9 | 2. Combining the sources =====
+# What did the join cost us?
+matched = df['Key_Weather'].notnull().sum()
+not_matched = df['Key_Weather'].isnull().sum()
 
-# ===== CELL 7: REQ 2 - things that look wrong =====
-# ---- Things that look wrong ----
-print("Dew point > 100F (impossible for this climate):", (df["dewp"] > 100).sum(), "rows, value(s):", df.loc[df["dewp"] > 100, "dewp"].unique())
-ratio = (weather["wind_gust"] / weather["wind_speed"]).replace([np.inf], np.nan).dropna()
-print(f"wind_gust / wind_speed ratio: min {ratio.min():.4f}, max {ratio.max():.4f}  -> gust is a copy of speed x 1.15")
-print("Flights with hour = 24:", df["hour"].eq(24).sum())
-print("pressure missing:", f"{df['pressure'].isna().mean():.1%}")
-print(f"dep_delay: median {df['dep_delay'].median():.0f} min, mean {df['dep_delay'].mean():.1f} min, "
-      f"99th pct {df['dep_delay'].quantile(.99):.0f} min, max {df['dep_delay'].max():.0f} min")
+print('Matched:    ', matched, f'({matched / len(df):.1%})')
+print('Not matched:', not_matched, f'({not_matched / len(df):.1%})')
 
-# ===== CELL 8: REQ 2 - cleaning (every decision logged) =====
-# ---- Cleaning (every step logged) ----
-log = [["Dropped 9 empty columns in Flight.csv", "Blank columns left over from Excel", len(empty_cols)],
-       ["Skipped junk first row in weather.csv", "Row of column numbers above the real header", 1],
-       ["Dropped weather 'date' text column", "Repeats year/month/day/hour", len(weather)]]
-clean = df.drop(columns="_merge").copy()
+# Weather hours that no flight used (e.g. overnight when there are no departures)
+print('Weather hours with no flight:', len(df_weather) - df['Key_Weather'].nunique())
 
-before = clean["dewp"].corr(clean["dep_delay"])
-n = (clean["dewp"] > 100).sum(); clean.loc[clean["dewp"] > 100, "dewp"] = np.nan
-log.append(["Dew point > 100F set to missing", "Physically impossible (sensor/entry error)", n])
+# ===== CELL 10 | Do the unmatched flights have anything in common? =====
+# Do the unmatched flights have anything in common?
+unmatched = df[df['Key_Weather'].isnull()]
 
-n = clean["hour"].eq(24).sum(); clean.loc[clean["hour"].eq(24), "hour"] = 0
-log.append(["hour 24 recoded to 0", "24:00 is midnight; keeps hour in 0-23", n])
+# 1. Cancelled flights have no departure time, so their key ends in "-NA"
+cancelled = unmatched['dep_time'].isnull().sum()
 
-clean["cancelled"] = clean["dep_time"].isna()
-n = clean["cancelled"].sum()
-log.append(["Cancelled flights excluded from delay analysis", "No delay exists to measure; reported separately", n])
+# 2. Flights that left at exactly midnight are recorded as hour 24 - weather uses 0-23
+hour_24 = (unmatched['hour'] == 24).sum()
 
-clean = clean.drop(columns=["wind_gust", "pressure"])
-log.append(["Dropped wind_gust", "Exact copy of wind_speed x 1.15, adds no information", len(clean)])
-log.append(["Dropped pressure", f"{df['pressure'].isna().mean():.0%} missing; imputing would invent data", len(clean)])
+# 3. The rest: flights in an hour that is missing from the weather file
+missing_weather = not_matched - cancelled - hour_24
 
-n = clean["tailnum"].isna().sum()
-log.append(["Kept rows with missing tailnum", "Aircraft ID is not used in the analysis", n])
+print('Cancelled flights:           ', cancelled)
+print('Hour recorded as 24:         ', hour_24)
+print('Hour missing in weather file:', missing_weather)
 
-clean["delayed15"] = (clean["dep_delay"] > 15).astype(int)   # industry (FAA) definition of a delay
-clean["season"] = clean["month"].map({12: "Winter", 1: "Winter", 2: "Winter", 3: "Spring", 4: "Spring", 5: "Spring",
-                                      6: "Summer", 7: "Summer", 8: "Summer", 9: "Autumn", 10: "Autumn", 11: "Autumn"})
-log.append(["Added delayed15 flag and season", "FAA defines 'delayed' as >15 min; season aids grouping", len(clean)])
+# ===== CELL 11 | Do the unmatched flights have anything in common? =====
+# Which dates are missing weather?
+missing = unmatched[unmatched['dep_time'].notnull() & (unmatched['hour'] != 24)]
+missing_dates = missing.groupby(['month', 'day']).size().sort_values(ascending=False)
+print(missing_dates.head(10))
 
-# 'hour' is the ACTUAL departure hour (dep_time // 100), so a late flight moves into a later hour.
-# Using it to explain delay is circular (leakage). Rebuild the SCHEDULED hour = actual time - delay.
-dep_min = (clean["dep_time"] // 100) * 60 + clean["dep_time"] % 100
-clean["sched_hour"] = (((dep_min - clean["dep_delay"]) % 1440) // 60)
-n = (clean["sched_hour"] != clean["hour"]).sum()
-log.append(["Added sched_hour (scheduled departure hour)", "'hour' is actual departure hour; it leaks the delay", n])
-print("Mean delay of flights that ACTUALLY left 1-4am:", round(clean.loc[clean.hour.between(1, 4), "dep_delay"].mean()),
-      "min; flights SCHEDULED 1-4am:", (clean["sched_hour"].between(1, 4)).sum())
+# The weather file stops on 30 December
+print('Last weather day:', df_weather[df_weather['month'] == 12]['day'].max())
 
-# Analysis set: flights that departed AND have weather
-flown = clean[~clean["cancelled"] & clean["temp"].notna()].copy()
-log.append(["Analysis set = departed flights with weather", "Needed for weather comparisons and the model", len(flown)])
+# ===== CELL 12 | Do the unmatched flights have anything in common? =====
+missing_dates.head(10).sort_values().plot(kind='barh')
+plt.title('Flights without weather, by date (month, day)')
+plt.xlabel('Number of flights')
+plt.show()
 
-cleaning_log = pd.DataFrame(log, columns=["Decision", "Why", "Rows affected"])
-display(cleaning_log)
+# ===== CELL 13 | Do the unmatched flights have anything in common? =====
+# Does the Python join agree with the Excel VLOOKUP?
+# Optional: only runs if the Excel file is also uploaded to Colab
+import os
+if os.path.exists('Flight_and_Weather_-_working.xlsx'):
+    df_excel = pd.read_excel('Flight_and_Weather_-_working.xlsx')
+    # the last column of the Excel sheet is the key returned by VLOOKUP (blank = no match)
+    print('Excel VLOOKUP - flights without weather:', df_excel.iloc[:, -1].isnull().sum())
+    print('Python join   - flights without weather:', not_matched)
 
-print(f"Dew point vs delay correlation: before fix {before:.4f}, after fix {clean['dewp'].corr(clean['dep_delay']):.4f}")
-cap = flown["dep_delay"].clip(upper=flown["dep_delay"].quantile(.99))
-print(f"Mean delay with all flights {flown['dep_delay'].mean():.2f} min vs. capped at 99th pct {cap.mean():.2f} min "
-      "-> extreme delays are real events, kept in the data")
+# ===== CELL 14 | 3. What the data contains and its condition =====
+print('Rows and columns:', df.shape)
+print('Airports:     ', list(df['origin'].unique()))
+print('Carriers:     ', df['carrier'].nunique())
+print('Destinations: ', df['dest'].nunique())
+print('Year:         ', list(df['year'].unique()))
 
-# ===== CELL 9: REQ 2 - shape of the target (delay distribution) =====
-# ---- Shape of the target: most flights leave early, a few are very late ----
-fig, axes = plt.subplots(1, 2, figsize=(12, 3.8))
-axes[0].hist(flown["dep_delay"].clip(-30, 180), bins=70, color=BLUE, edgecolor="white", linewidth=0.5)
-for v, lab, c in [(flown["dep_delay"].median(), "median", INK), (flown["dep_delay"].mean(), "mean", ORANGE)]:
-    axes[0].axvline(v, color=c, lw=1.5, ls="--")
-axes[0].text(12, axes[0].get_ylim()[1] * .9, f"median {flown['dep_delay'].median():.0f} min", color=INK)
-axes[0].text(12, axes[0].get_ylim()[1] * .8, f"mean {flown['dep_delay'].mean():.1f} min", color=ORANGE)
-axes[0].set_title("Departure delay (clipped at -30 / 180 min)")
-axes[0].set_xlabel("Minutes (negative = early)"); axes[0].set_ylabel("Flights")
+# ===== CELL 15 | 3. What the data contains and its condition =====
+df.describe().round(1)
 
-# Pareto: what share of all delay minutes comes from the worst flights?
-late = np.sort(flown["dep_delay"].clip(lower=0).values)[::-1]
-cum = np.cumsum(late) / late.sum()
-x = np.arange(1, len(late) + 1) / len(late)
-axes[1].plot(x, cum, color=BLUE, lw=2)
-share5 = cum[int(len(late) * .05) - 1]
-axes[1].scatter([.05], [share5], color=ORANGE, s=50, zorder=3)
-axes[1].annotate(f"worst 5% of flights = {share5:.0%} of delay minutes", (.05, share5), xytext=(.2, share5 - .15),
-                 color=INK, arrowprops=dict(arrowstyle="-", color=INK2))
-axes[1].xaxis.set_major_formatter(mtick.PercentFormatter(1)); axes[1].yaxis.set_major_formatter(mtick.PercentFormatter(1))
-axes[1].set_title("Delay minutes are concentrated in few flights")
-axes[1].set_xlabel("Share of flights (worst first)"); axes[1].set_ylabel("Share of all delay minutes")
-plt.tight_layout(); plt.show()
+# ===== CELL 16 | 3. What the data contains and its condition =====
+# Missing values in each column
+df.isnull().sum()
 
-# ===== CELL 10: REQ 3 - BASELINE (simplest possible answer) =====
-# ---- Baseline: predict the same number for every flight ----
-FEATURES = ["dep_delay", "delayed15", "sched_hour", "month", "carrier", "origin", "season",
-            "visib", "wind_speed", "precip", "humid", "temp", "distance"]
-model_df = flown[FEATURES].dropna().copy()
-model_df["hour"] = model_df.pop("sched_hour").astype(int)   # models use the SCHEDULED hour
-train, test = train_test_split(model_df, test_size=0.2, random_state=42)
-print(f"Train {len(train):,} flights | Test {len(test):,} flights")
+# ===== CELL 17 | Things that look wrong =====
+# Problem 1: dew point of 3,282 F is impossible (the maximum ever recorded on Earth is about 95 F)
+print(df['dewp'].describe())
+print('Rows with dew point above 100:', (df['dewp'] > 100).sum())
 
-def scores(y, pred):
-    return {"MAE (min)": mean_absolute_error(y, pred),
-            "RMSE (min)": mean_squared_error(y, pred) ** 0.5,
-            "R2": r2_score(y, pred)}
+# ===== CELL 18 | Things that look wrong =====
+# Problem 2: wind_gust is always exactly 1.15 x wind_speed, so it is not a real measurement
+ratio = df_weather['wind_gust'] / df_weather['wind_speed']
+print(ratio.describe())
 
-baseline = pd.DataFrame({
-    "Predict the mean": scores(test["dep_delay"], np.full(len(test), train["dep_delay"].mean())),
-    "Predict the median": scores(test["dep_delay"], np.full(len(test), train["dep_delay"].median())),
-}).T
-display(baseline)
+# ===== CELL 19 | Things that look wrong =====
+# Problem 3: pressure is missing for many flights
+print('Share of flights missing pressure:', round(df['pressure'].isnull().mean() * 100, 1), '%')
 
-base_rate = train["delayed15"].mean()
-print(f"Share of flights delayed >15 min (train): {base_rate:.1%}")
-print(f"'Every flight is on time' is right {1 - test['delayed15'].mean():.1%} of the time - but catches 0% of delays.")
+# ===== CELL 20 | Things that look wrong =====
+# Problem 4: 'hour' is the hour the flight ACTUALLY left, not the hour it was scheduled
+# Example: a flight scheduled at 19:00 that is 3 hours late shows hour = 22
+# Look at flights that left between 1am and 4am - they are all very late
+print('Average delay of flights that left at 1-4am:',
+      round(df[df['hour'].isin([1, 2, 3, 4])]['dep_delay'].mean()), 'minutes')
 
-# ===== CELL 11: REQ 4 - VISUAL: delay by hour of day =====
-# ---- Helper: proportion with 95% Wilson confidence interval ----
-def prop_ci(s):
-    k, n = s.sum(), s.count()
-    lo, hi = stats.binomtest(int(k), int(n)).proportion_ci(confidence_level=0.95, method="wilson")
-    return pd.Series({"rate": k / n, "lo": lo, "hi": hi, "n": n})
+# ===== CELL 21 | Things that look wrong =====
+# Problem 5: the delay distribution is lopsided - a few very late flights pull the average up
+df['dep_delay'].plot(kind='hist', bins=100, edgecolor='white', range=(-30, 200))
+plt.title('Distribution of departure delay (minutes)')
+plt.xlabel('Departure delay in minutes (negative = left early)')
+plt.show()
 
-# ---- V1: time of day ----
-by_hour = flown.groupby("sched_hour")["delayed15"].apply(prop_ci).unstack()
-by_hour = by_hour[by_hour["n"] >= 200]                       # hide hours with too few flights to trust
-vol = flown["sched_hour"].value_counts().sort_index().loc[by_hour.index]
+print('Mean:  ', round(df['dep_delay'].mean(), 1))
+print('Median:', df['dep_delay'].median())
+print('Max:   ', df['dep_delay'].max())
 
-fig, axes = plt.subplots(1, 2, figsize=(12, 3.8))
-axes[0].bar(vol.index, vol.values, color=GREY, width=0.8)
-axes[0].set_title("Scheduled departures by hour"); axes[0].set_xlabel("Scheduled hour"); axes[0].set_ylabel("Flights")
-axes[1].fill_between(by_hour.index, by_hour["lo"], by_hour["hi"], color=BLUE, alpha=.2, label="95% CI")
-axes[1].plot(by_hour.index, by_hour["rate"], color=BLUE, lw=2, marker="o", ms=4, label="% delayed >15 min")
-axes[1].axhline(base_rate, color=INK2, ls="--", lw=1); axes[1].text(5, base_rate + .01, f"average {base_rate:.0%}", color=INK2)
-axes[1].yaxis.set_major_formatter(mtick.PercentFormatter(1))
-axes[1].set_title("Delay risk builds through the day"); axes[1].set_xlabel("Scheduled hour"); axes[1].legend(loc="upper left")
-plt.tight_layout(); plt.show()
+# ===== CELL 22 | Cleaning decisions =====
+# Cleaning step 1: set the impossible dew point to missing
+corr_before = df['dewp'].corr(df['dep_delay'])
+df.loc[df['dewp'] > 100, 'dewp'] = np.nan
+corr_after = df['dewp'].corr(df['dep_delay'])
+print('Correlation of dew point with delay - before:', round(corr_before, 3), ' after:', round(corr_after, 3))
 
-# ===== CELL 12: REQ 4 - VISUAL: month x hour heatmap =====
-# ---- V2: month x hour heatmap ----
-heat = flown[flown["sched_hour"].between(5, 23)].astype({"sched_hour": int}).pivot_table(index="month", columns="sched_hour", values="delayed15", aggfunc="mean")
-fig, ax = plt.subplots(figsize=(12, 4.2))
-sns.heatmap(heat, cmap="Blues", ax=ax, cbar_kws={"format": mtick.PercentFormatter(1), "label": "% delayed >15 min"},
-            linewidths=1, linecolor="white")
-ax.set_yticklabels(["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], rotation=0)
-ax.set_title("Where the risk sits: afternoons and evenings, worst in Dec, Feb and Jun-Jul"); ax.set_xlabel("Scheduled departure hour"); ax.set_ylabel("")
-plt.tight_layout(); plt.show()
+# ===== CELL 23 | Cleaning decisions =====
+# Cleaning step 2: drop wind_gust (copy of wind_speed) and pressure (17% missing)
+df = df.drop(columns=['wind_gust', 'pressure'])
 
-# ===== CELL 13: REQ 4 - VISUAL: carriers and SEA vs PDX =====
-# ---- V3: carriers (with 95% CI) and V4: airport by month ----
-by_car = flown.groupby("carrier")["delayed15"].apply(prop_ci).unstack().sort_values("rate")
-fig, axes = plt.subplots(1, 2, figsize=(12, 4.2))
-ax = axes[0]
-ax.hlines(range(len(by_car)), by_car["lo"], by_car["hi"], color=BLUE, lw=2)
-ax.scatter(by_car["rate"], range(len(by_car)), color=BLUE, s=40, zorder=3)
-ax.axvline(base_rate, color=INK2, ls="--", lw=1)
-ax.set_yticks(range(len(by_car))); ax.set_yticklabels([f"{c}  (n={int(n):,})" for c, n in zip(by_car.index, by_car["n"])])
-ax.xaxis.set_major_formatter(mtick.PercentFormatter(1))
-ax.set_title("Carrier delay rate, 95% CI"); ax.set_xlabel("% delayed >15 min")
+# ===== CELL 24 | Cleaning decisions =====
+# Cleaning step 3: rebuild the SCHEDULED departure hour
+# dep_time is written as hhmm (e.g. 1930 = 19:30). Convert to minutes after midnight,
+# subtract the delay, and convert back to an hour
+dep_minutes = (df['dep_time'] // 100) * 60 + (df['dep_time'] % 100)
+sched_minutes = (dep_minutes - df['dep_delay']) % (24 * 60)
+df['sched_hour'] = sched_minutes // 60
 
-by_m = flown.groupby(["month", "origin"])["delayed15"].mean().unstack()
-for col, c in [("SEA", BLUE), ("PDX", ORANGE)]:
-    axes[1].plot(by_m.index, by_m[col], color=c, lw=2, marker="o", ms=4)
-    axes[1].text(12.2, by_m[col].iloc[-1], col, color=c, va="center", fontweight="bold")
-axes[1].set_xticks(range(1, 13)); axes[1].set_xticklabels(list("JFMAMJJASOND"))
-axes[1].yaxis.set_major_formatter(mtick.PercentFormatter(1))
-axes[1].set_title("Seasonality: Seattle vs Portland"); axes[1].set_xlabel("Month")
-plt.tight_layout(); plt.show()
+# Check: flights that left at 1-4am were mostly scheduled in the evening
+df[df['hour'].isin([1, 2, 3, 4])]['sched_hour'].value_counts().head()
 
-# ===== CELL 14: REQ 4 - VISUAL: weather bands =====
-# ---- V5: does weather matter? Delay rate across weather bands ----
-bands = {
-    "visib": ([-0.1, 1, 3, 6, 9.9, 10], ["<1", "1-3", "3-6", "6-10", "10 (clear)"], "Visibility (miles)"),
-    "wind_speed": ([-0.1, 5, 10, 15, 20, 40], ["0-5", "5-10", "10-15", "15-20", "20+"], "Wind speed (mph)"),
-    "precip": ([-0.01, 0, 0.02, 0.05, 1], ["none", "trace", "light", "heavier"], "Precipitation (in/hr)"),
-    "temp": ([0, 32, 45, 60, 75, 100], ["<32 (freezing)", "32-45", "45-60", "60-75", "75+"], "Temperature (F)"),
-}
-fig, axes = plt.subplots(1, 4, figsize=(15, 3.8), sharey=True)
-for ax, (col, (bins, labels, title)) in zip(axes, bands.items()):
-    g = flown.assign(b=pd.cut(flown[col], bins, labels=labels)).groupby("b", observed=True)["delayed15"].apply(prop_ci).unstack()
-    ax.bar(range(len(g)), g["rate"], color=BLUE, width=0.6)
-    ax.errorbar(range(len(g)), g["rate"], yerr=[g["rate"] - g["lo"], g["hi"] - g["rate"]], fmt="none", ecolor=INK, capsize=3, lw=1)
-    ax.set_xticks(range(len(g))); ax.set_xticklabels(g.index, rotation=30, ha="right", fontsize=8)
-    for i, n in enumerate(g["n"]):
-        ax.text(i, 0.005, f"n={int(n):,}", ha="center", fontsize=7, color="white", rotation=90, va="bottom")
-    ax.axhline(base_rate, color=INK2, ls="--", lw=1); ax.set_title(title)
-axes[0].yaxis.set_major_formatter(mtick.PercentFormatter(1)); axes[0].set_ylabel("% delayed >15 min")
-plt.suptitle("Bad weather raises delay risk only modestly, and only at the extremes", fontweight="bold", y=1.03)
-plt.tight_layout(); plt.show()
+# ===== CELL 25 | Cleaning decisions =====
+# Cleaning step 4: cancelled flights have no delay to measure - keep them out of the delay analysis
+print('Cancelled flights:', df['dep_time'].isnull().sum())
 
-# ===== CELL 15: REQ 4 - VISUAL: correlation heatmap =====
-# ---- V6: correlation of numeric drivers with delay ----
-num = ["dep_delay", "sched_hour", "month", "distance", "temp", "dewp", "humid", "wind_speed", "precip", "visib"]
-corr = flown[num].corr()
-fig, ax = plt.subplots(figsize=(8, 6))
-sns.heatmap(corr, cmap="RdBu_r", vmin=-1, vmax=1, center=0, annot=True, fmt=".2f", annot_kws={"size": 8},
-            mask=np.triu(np.ones_like(corr, dtype=bool), 1), linewidths=1, linecolor="white", ax=ax)
-ax.set_title("No single variable explains delay (all |r| with dep_delay < 0.1)")
-plt.tight_layout(); plt.show()
-print(corr["dep_delay"].drop("dep_delay").sort_values(key=abs, ascending=False).round(3))
+# Cleaning step 5: flights without weather can't be used in the weather analysis
+# Analysis set = flights that departed AND have weather
+df_clean = df[df['dep_time'].notnull() & df['Key_Weather'].notnull()].copy()
+print('Flights in analysis set:', len(df_clean))
 
-# ===== CELL 16: REQ 5 - UNCERTAINTY: bootstrap overall estimates =====
-# ---- Bootstrap: overall estimates ----
-B = 2000
-d = flown["dep_delay"].values; f15 = flown["delayed15"].values
-boot_mean, boot_rate = [], []
-for _ in range(B):
-    i = RNG.integers(0, len(d), len(d))
-    boot_mean.append(d[i].mean()); boot_rate.append(f15[i].mean())
-print(f"Mean delay: {d.mean():.2f} min, 95% CI [{np.percentile(boot_mean, 2.5):.2f}, {np.percentile(boot_mean, 97.5):.2f}]")
-print(f"% delayed >15: {f15.mean():.2%}, 95% CI [{np.percentile(boot_rate, 2.5):.2%}, {np.percentile(boot_rate, 97.5):.2%}]")
+# ===== CELL 26 | Cleaning decisions =====
+# Cleaning step 6: add a yes/no column: was the flight more than 15 minutes late?
+# 15 minutes is the official airline industry definition of "delayed"
+df_clean['delayed'] = (df_clean['dep_delay'] > 15).astype(int)
 
-# ===== CELL 17: REQ 5 - UNCERTAINTY: key comparisons with 95% CI =====
-# ---- Comparisons that drive the recommendation: difference in delay rate with 95% CI ----
-def diff_ci(a, b):
-    """Difference in proportions a - b with a normal-approximation 95% CI and two-proportion z-test p-value."""
-    p1, p2, n1, n2 = a.mean(), b.mean(), len(a), len(b)
-    se = np.sqrt(p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2)
-    pooled = (a.sum() + b.sum()) / (n1 + n2)
-    z = (p1 - p2) / np.sqrt(pooled * (1 - pooled) * (1 / n1 + 1 / n2))
-    return {"diff": p1 - p2, "lo": p1 - p2 - 1.96 * se, "hi": p1 - p2 + 1.96 * se, "p": 2 * stats.norm.sf(abs(z)), "n_a": n1, "n_b": n2}
+# ===== CELL 27 | Cleaning decisions =====
+# Cleaning step 7: keep extreme delays - they are real events, not errors
+# How much would removing the worst 1% change the average?
+cutoff = df_clean['dep_delay'].quantile(0.99)
+print('99th percentile delay:', cutoff, 'minutes')
+print('Average delay with all flights:     ', round(df_clean['dep_delay'].mean(), 2))
+print('Average delay without the worst 1%: ', round(df_clean[df_clean['dep_delay'] <= cutoff]['dep_delay'].mean(), 2))
 
-F = flown
-comparisons = pd.DataFrame({
-    "Evening (17-23h) vs morning (5-9h)": diff_ci(F.loc[F.sched_hour.between(17, 23), "delayed15"], F.loc[F.sched_hour.between(5, 9), "delayed15"]),
-    "Low visibility (<3 mi) vs clear": diff_ci(F.loc[F.visib < 3, "delayed15"], F.loc[F.visib >= 10, "delayed15"]),
-    "Freezing (<32F) vs not": diff_ci(F.loc[F.temp < 32, "delayed15"], F.loc[F.temp >= 32, "delayed15"]),
-    "Wind 20+ mph vs <20": diff_ci(F.loc[F.wind_speed >= 20, "delayed15"], F.loc[F.wind_speed < 20, "delayed15"]),
-    "Any precipitation vs none": diff_ci(F.loc[F.precip > 0, "delayed15"], F.loc[F.precip == 0, "delayed15"]),
-    "December vs rest of year": diff_ci(F.loc[F.month == 12, "delayed15"], F.loc[F.month != 12, "delayed15"]),
-    "SEA vs PDX": diff_ci(F.loc[F.origin == "SEA", "delayed15"], F.loc[F.origin == "PDX", "delayed15"]),
-}).T.sort_values("diff")
-display(comparisons.style.format({"diff": "{:+.1%}", "lo": "{:+.1%}", "hi": "{:+.1%}", "p": "{:.1e}", "n_a": "{:,.0f}", "n_b": "{:,.0f}"}))
+# ===== CELL 28 | Cleaning decisions =====
+# Cleaning log - every decision in one table
+cleaning_log = [
+    {'Step': 'Skipped first row of weather.csv', 'Why': 'Row of column numbers above the real header', 'Rows affected': 1},
+    {'Step': 'Dropped 9 empty columns in Flight.csv', 'Why': 'Left over from Excel, no data', 'Rows affected': 'all'},
+    {'Step': 'Dropped weather date column', 'Why': 'Repeats year, month, day, hour', 'Rows affected': 'all'},
+    {'Step': 'Dew point > 100 set to missing', 'Why': 'Physically impossible value (3,282 F)', 'Rows affected': 6},
+    {'Step': 'Dropped wind_gust', 'Why': 'Always 1.15 x wind_speed, not a real measurement', 'Rows affected': 'all'},
+    {'Step': 'Dropped pressure', 'Why': '17% missing', 'Rows affected': 'all'},
+    {'Step': 'Added sched_hour', 'Why': 'hour is actual departure hour, which already contains the delay', 'Rows affected': 'all'},
+    {'Step': 'Removed cancelled flights', 'Why': 'No delay to measure', 'Rows affected': 857},
+    {'Step': 'Removed flights without weather', 'Why': 'Needed for weather analysis', 'Rows affected': 912},
+    {'Step': 'Added delayed column (> 15 min)', 'Why': 'Industry definition of a delay', 'Rows affected': 'all'},
+    {'Step': 'Kept extreme delays', 'Why': 'Real events that matter to passengers', 'Rows affected': 0},
+]
+pd.DataFrame(cleaning_log)
 
-fig, ax = plt.subplots(figsize=(10, 4))
-y = range(len(comparisons))
-sig = comparisons["lo"].gt(0) | comparisons["hi"].lt(0)
-ax.hlines(y, comparisons["lo"], comparisons["hi"], color=[BLUE if s else GREY for s in sig], lw=3)
-ax.scatter(comparisons["diff"], y, color=[BLUE if s else GREY for s in sig], s=50, zorder=3)
-ax.axvline(0, color=INK, lw=1)
-ax.set_yticks(list(y)); ax.set_yticklabels(comparisons.index)
-ax.xaxis.set_major_formatter(mtick.PercentFormatter(1, decimals=0))
-ax.set_title("Change in delay rate (percentage points), 95% CI - grey = not distinguishable from zero")
-plt.tight_layout(); plt.show()
+# ===== CELL 29 | 4. Baseline: the simplest possible answer =====
+# The simplest possible answer: "every flight is delayed by the average amount"
+avg_delay = df_clean['dep_delay'].mean()
+print('Average delay:', round(avg_delay, 1), 'minutes')
 
-# ===== CELL 18: REQ 5 - UNCERTAINTY: bootstrap check of biggest effect =====
-# ---- Bootstrap check of the biggest effect (evening vs morning), no normality assumption ----
-eve = F.loc[F.sched_hour.between(17, 23), "delayed15"].values; mor = F.loc[F.sched_hour.between(5, 9), "delayed15"].values
-boot = np.array([RNG.choice(eve, len(eve)).mean() - RNG.choice(mor, len(mor)).mean() for _ in range(2000)])
-lo, hi = np.percentile(boot, [2.5, 97.5])
-fig, ax = plt.subplots(figsize=(8, 3.2))
-ax.hist(boot, bins=50, color=BLUE, edgecolor="white")
-for v in (lo, hi): ax.axvline(v, color=ORANGE, ls="--")
-ax.xaxis.set_major_formatter(mtick.PercentFormatter(1, decimals=1))
-ax.set_title(f"2,000 bootstrap resamples: evening - morning = {boot.mean():+.1%} (95% CI {lo:+.1%} to {hi:+.1%})")
-ax.set_xlabel("Difference in % delayed"); plt.tight_layout(); plt.show()
+# How wrong is that guess on average? (mean absolute error)
+baseline_error = (df_clean['dep_delay'] - avg_delay).abs().mean()
+print('Baseline error (MAE):', round(baseline_error, 1), 'minutes')
 
-# ===== CELL 19: REQ 6 - MODEL: compare models step by step =====
-# ---- Build models step by step and keep only what helps on unseen data ----
-specs = {
-    "1. Weather only":            "dep_delay ~ visib + wind_speed + precip + humid + temp",
-    "2. Time only":               "dep_delay ~ C(hour) + C(month)",
-    "3. Time + carrier + airport": "dep_delay ~ C(hour) + C(month) + C(carrier) + origin",
-    "4. Full (3 + weather)":      "dep_delay ~ C(hour) + C(month) + C(carrier) + origin + visib + wind_speed + precip + humid + temp + distance",
-}
-rows, fitted = {}, {}
-for name, f in specs.items():
-    m = smf.ols(f, data=train).fit()
-    fitted[name] = m
-    rows[name] = {**scores(test["dep_delay"], m.predict(test)), "Train R2": m.rsquared, "Parameters": len(m.params)}
-results = pd.concat([baseline.assign(**{"Train R2": 0.0, "Parameters": 1}), pd.DataFrame(rows).T])
-display(results)
+# ===== CELL 30 | 4. Baseline: the simplest possible answer =====
+# For the yes/no question: "is this flight going to be delayed?"
+pct_delayed = df_clean['delayed'].mean()
+print('Share of flights delayed more than 15 minutes:', round(pct_delayed * 100, 1), '%')
+print('Guessing "on time" for every flight is right', round((1 - pct_delayed) * 100, 1), '% of the time')
+print('...but it never catches a single delay')
 
-fig, axes = plt.subplots(1, 2, figsize=(12, 3.8))
-colors = [GREY, GREY] + [BLUE] * len(specs)
-axes[0].barh(results.index[::-1], results["MAE (min)"][::-1], color=colors[::-1], height=0.6)
-axes[0].set_xlim(results["MAE (min)"].min() * .95, results["MAE (min)"].max() * 1.01)
-axes[0].set_title("Test error (MAE, lower is better)"); axes[0].set_xlabel("Minutes")
-axes[1].barh(results.index[::-1], results["R2"][::-1], color=colors[::-1], height=0.6)
-axes[1].set_title("Test R² (share of variation explained)"); axes[1].set_yticklabels([])
-plt.tight_layout(); plt.show()
+# ===== CELL 31 | 5. What drives delay? =====
+# Chart 1: share of flights delayed, by scheduled hour
+hour_stats = df_clean.groupby('sched_hour')['delayed'].agg(['mean', 'sem', 'size'])
+hour_stats = hour_stats[hour_stats['size'] > 200]      # drop hours with very few flights
 
-# ===== CELL 20: REQ 6 - MODEL: which effects are real =====
-# ---- The final linear model: which effects are real? ----
-ols = fitted["4. Full (3 + weather)"]
-ci = ols.conf_int()
-coef = pd.DataFrame({"coef": ols.params, "lo": ci[0], "hi": ci[1], "p": ols.pvalues}).drop("Intercept")
-label = lambda i: i.replace("C(", "").replace(")[T.", " = ").replace("[T.", " = ").replace("]", "")
+hour_stats['mean'].plot(kind='bar', yerr=1.96 * hour_stats['sem'], capsize=3, figsize=(10, 5))
+plt.axhline(pct_delayed, color='red', linestyle='--', label='Average')
+plt.title('Share of flights delayed >15 min, by scheduled departure hour')
+plt.xlabel('Scheduled departure hour')
+plt.ylabel('Share delayed')
+plt.legend()
+plt.show()
 
-fig, axes = plt.subplots(1, 2, figsize=(13, 5))
-# Left: hour-of-day effect curve (reference = earliest scheduled hour)
-hr = coef[coef.index.str.startswith("C(hour)")].copy()
-hr.index = hr.index.str.extract(r"T\.(\d+)")[0].astype(int).values
-hr = hr.sort_index()
-axes[0].fill_between(hr.index, hr["lo"], hr["hi"], color=BLUE, alpha=.2)
-axes[0].plot(hr.index, hr["coef"], color=BLUE, marker="o", ms=4, lw=2)
-axes[0].axhline(0, color=INK, lw=1)
-axes[0].set_title("Hour effect vs earliest hour, holding all else equal"); axes[0].set_xlabel("Scheduled hour"); axes[0].set_ylabel("Extra minutes of delay")
-# Right: carrier, airport and month effects
-other = coef[coef.index.str.contains("carrier|origin|month")].sort_values("coef")
-sig = other["p"] < 0.05
-axes[1].hlines(range(len(other)), other["lo"], other["hi"], color=[BLUE if x else GREY for x in sig], lw=2.5)
-axes[1].scatter(other["coef"], range(len(other)), color=[BLUE if x else GREY for x in sig], s=35, zorder=3)
-axes[1].axvline(0, color=INK, lw=1)
-axes[1].set_yticks(range(len(other))); axes[1].set_yticklabels([label(i) for i in other.index], fontsize=8)
-axes[1].set_title("Carrier / airport / month (vs AA, PDX, Jan), 95% CI"); axes[1].set_xlabel("Extra minutes of delay")
-plt.tight_layout(); plt.show()
+# ===== CELL 32 | 5. What drives delay? =====
+# Chart 2: month x hour heatmap
+heat = df_clean[df_clean['sched_hour'] >= 5].groupby(['month', 'sched_hour'])['delayed'].mean().unstack()
 
-print("Weather effects (minutes per unit, holding time/carrier/airport fixed):")
-display(coef.loc[["visib", "wind_speed", "precip", "humid", "temp", "distance"]])
+plt.figure(figsize=(12, 5))
+sns.heatmap(heat, cmap='Blues')
+plt.title('Share of flights delayed, by month and scheduled hour')
+plt.xlabel('Scheduled departure hour')
+plt.ylabel('Month')
+plt.show()
 
-# ===== CELL 21: REQ 6 - MODEL: where the model fails =====
-# ---- Where the model fails ----
-pred = ols.predict(test); resid = test["dep_delay"] - pred
-fig, axes = plt.subplots(1, 3, figsize=(15, 4))
-hb = axes[0].hexbin(pred, test["dep_delay"].clip(-30, 300), gridsize=40, bins="log", cmap="Blues", mincnt=1)
-axes[0].plot([-10, 30], [-10, 30], color=ORANGE, lw=1.5)
-axes[0].set_title("Predicted vs actual"); axes[0].set_xlabel("Predicted delay (min)"); axes[0].set_ylabel("Actual (clipped at 300)")
+# ===== CELL 33 | 5. What drives delay? =====
+# Chart 3: share delayed by month
+month_stats = df_clean.groupby('month')['delayed'].agg(['mean', 'sem', 'size'])
 
-buckets = pd.cut(test["dep_delay"], [-100, 0, 15, 60, 180, 2000], labels=["early/on time", "1-15", "16-60", "61-180", "180+"])
-err = pd.DataFrame({"b": buckets, "abs_err": resid.abs(), "bias": resid}).groupby("b", observed=True).agg(
-    MAE=("abs_err", "mean"), bias=("bias", "mean"), share=("abs_err", "size"))
-err["share"] /= err["share"].sum()
-axes[1].bar(err.index.astype(str), err["MAE"], color=BLUE, width=0.6)
-for i, (m_, s_) in enumerate(zip(err["MAE"], err["share"])):
-    axes[1].text(i, m_ + 3, f"{s_:.1%} of flights", ha="center", fontsize=8, color=INK2)
-axes[1].set_title("Error explodes for long delays"); axes[1].set_xlabel("Actual delay (min)"); axes[1].set_ylabel("MAE (min)")
+month_stats['mean'].plot(kind='bar', yerr=1.96 * month_stats['sem'], capsize=3, figsize=(10, 5))
+plt.axhline(pct_delayed, color='red', linestyle='--', label='Average')
+plt.title('Share of flights delayed >15 min, by month')
+plt.xlabel('Month')
+plt.ylabel('Share delayed')
+plt.legend()
+plt.show()
 
-stats.probplot(resid.sample(5000, random_state=1), dist="norm", plot=axes[2])
-axes[2].get_lines()[0].set(color=BLUE, markersize=2); axes[2].get_lines()[1].set(color=ORANGE)
-axes[2].set_title("Residuals are far from normal (heavy right tail)")
-plt.tight_layout(); plt.show()
-display(err)
+# ===== CELL 34 | 5. What drives delay? =====
+# Chart 4: share delayed by carrier
+carrier_stats = df_clean.groupby('carrier')['delayed'].agg(['mean', 'sem', 'size']).sort_values('mean')
 
-# ===== CELL 22: REQ 6 - MODEL: probability of delay (logistic) =====
-# ---- A more useful framing: probability a flight is delayed >15 min (logistic regression) ----
-logit = smf.logit("delayed15 ~ C(hour) + C(month) + C(carrier) + origin + visib + wind_speed + precip + humid + temp + distance",
-                  data=train).fit(disp=0)
-p_test = logit.predict(test)
-auc = roc_auc_score(test["delayed15"], p_test)
-fpr, tpr, _ = roc_curve(test["delayed15"], p_test)
+carrier_stats['mean'].plot(kind='barh', xerr=1.96 * carrier_stats['sem'], capsize=3, figsize=(8, 5))
+plt.axvline(pct_delayed, color='red', linestyle='--', label='Average')
+plt.title('Share of flights delayed >15 min, by carrier')
+plt.xlabel('Share delayed')
+plt.legend()
+plt.show()
 
-test_r = test.assign(p=p_test, risk_decile=pd.qcut(p_test, 10, labels=range(1, 11)))
-lift = test_r.groupby("risk_decile", observed=True).agg(predicted=("p", "mean"), actual=("delayed15", "mean"))
+carrier_stats
 
-fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-axes[0].plot(fpr, tpr, color=BLUE, lw=2, label=f"model, AUC = {auc:.2f}")
-axes[0].plot([0, 1], [0, 1], color=GREY, ls="--", label="baseline (coin flip), AUC = 0.50")
-axes[0].set_title("Ranking flights by delay risk"); axes[0].set_xlabel("False positive rate"); axes[0].set_ylabel("True positive rate")
-axes[0].legend(loc="lower right")
-axes[1].bar(lift.index.astype(int), lift["actual"], color=BLUE, width=0.6, label="actual")
-axes[1].plot(lift.index.astype(int), lift["predicted"], color=ORANGE, marker="o", lw=2, label="predicted")
-axes[1].axhline(test["delayed15"].mean(), color=INK2, ls="--", lw=1)
-axes[1].yaxis.set_major_formatter(mtick.PercentFormatter(1))
-axes[1].set_title("Top-risk 10% of flights vs bottom 10%"); axes[1].set_xlabel("Risk decile (1 = lowest)"); axes[1].legend()
-plt.tight_layout(); plt.show()
-print(f"AUC {auc:.3f} | top decile delay rate {lift['actual'].iloc[-1]:.1%} vs bottom decile {lift['actual'].iloc[0]:.1%} "
-      f"(average {test['delayed15'].mean():.1%}) -> {lift['actual'].iloc[-1] / test['delayed15'].mean():.1f}x lift")
+# ===== CELL 35 | 5. What drives delay? =====
+# Chart 5: Seattle vs Portland, by month
+df_clean.groupby(['month', 'origin'])['delayed'].mean().unstack().plot(marker='o', figsize=(10, 5))
+plt.title('Share of flights delayed, Seattle vs Portland')
+plt.xlabel('Month')
+plt.ylabel('Share delayed')
+plt.show()
+
+# ===== CELL 36 | 5. What drives delay? =====
+# Chart 6: weather - put each measurement into bands and compare the share delayed
+df_clean['visib_band'] = pd.cut(df_clean['visib'], bins=[-1, 3, 9.9, 10], labels=['under 3 miles', '3-10 miles', '10 (clear)'])
+df_clean['wind_band'] = pd.cut(df_clean['wind_speed'], bins=[-1, 10, 20, 50], labels=['0-10 mph', '10-20 mph', '20+ mph'])
+df_clean['temp_band'] = pd.cut(df_clean['temp'], bins=[0, 32, 50, 70, 110], labels=['below 32 F', '32-50 F', '50-70 F', '70+ F'])
+df_clean['rain'] = np.where(df_clean['precip'] > 0, 'rain', 'no rain')
+
+fig, axes = plt.subplots(1, 4, figsize=(16, 4), sharey=True)
+for ax, col in zip(axes, ['visib_band', 'wind_band', 'temp_band', 'rain']):
+    s = df_clean.groupby(col, observed=True)['delayed'].agg(['mean', 'sem'])
+    s['mean'].plot(kind='bar', yerr=1.96 * s['sem'], capsize=3, ax=ax)
+    ax.axhline(pct_delayed, color='red', linestyle='--')
+    ax.set_title(col)
+    ax.set_xlabel('')
+axes[0].set_ylabel('Share delayed')
+plt.suptitle('Share of flights delayed in different weather')
+plt.tight_layout()
+plt.show()
+
+# ===== CELL 37 | 5. What drives delay? =====
+# Chart 7: correlation of each number with departure delay
+cols = ['dep_delay', 'sched_hour', 'month', 'distance', 'temp', 'dewp', 'humid', 'wind_speed', 'precip', 'visib']
+
+plt.figure(figsize=(9, 7))
+sns.heatmap(df_clean[cols].corr().round(2), annot=True, cmap='coolwarm', vmin=-1, vmax=1)
+plt.title('Correlation between variables')
+plt.show()
+
+df_clean[cols].corr()['dep_delay'].sort_values(ascending=False).round(3)
+
+# ===== CELL 38 | 6. How sure are we? =====
+# How precise is our overall number? Take many random samples of 1,000 flights
+sample_means = [df_clean['delayed'].sample(1000).mean() for i in range(200)]
+
+plt.hist(sample_means, bins=20)
+plt.axvline(pct_delayed, color='red')
+plt.title('Share delayed in 200 random samples of 1,000 flights')
+plt.xlabel('Share delayed')
+plt.ylabel('Number of samples')
+plt.show()
+
+# ===== CELL 39 | 6. How sure are we? =====
+# 95% confidence interval for the overall share delayed (all flights)
+sem = df_clean['delayed'].sem()
+print('Share delayed:', round(pct_delayed * 100, 2), '%')
+print('95% CI:', round((pct_delayed - 1.96 * sem) * 100, 2), '% to', round((pct_delayed + 1.96 * sem) * 100, 2), '%')
+
+# ===== CELL 40 | 6. How sure are we? =====
+# Confidence intervals for the comparisons that matter to the business
+df_clean['time_of_day'] = pd.cut(df_clean['sched_hour'], bins=[-1, 4, 9, 13, 16, 20, 23],
+                                 labels=['night 0-4', 'morning 5-9', 'midday 10-13', 'afternoon 14-16', 'evening 17-20', 'late 21-23'])
+
+tod = df_clean.groupby('time_of_day', observed=True)['delayed'].agg(['mean', 'sem', 'size'])
+tod['LOWER'] = tod['mean'] - 1.96 * tod['sem']
+tod['UPPER'] = tod['mean'] + 1.96 * tod['sem']
+tod.round(3)
+
+# ===== CELL 41 | 6. How sure are we? =====
+# Same table for weather conditions
+df_clean['freezing'] = np.where(df_clean['temp'] < 32, 'freezing', 'not freezing')
+df_clean['low_visib'] = np.where(df_clean['visib'] < 3, 'visibility < 3 mi', 'visibility 3+ mi')
+
+for col in ['freezing', 'low_visib', 'rain', 'origin']:
+    t = df_clean.groupby(col)['delayed'].agg(['mean', 'sem', 'size'])
+    t['LOWER'] = t['mean'] - 1.96 * t['sem']
+    t['UPPER'] = t['mean'] + 1.96 * t['sem']
+    print(t.round(3), '\n')
+
+# ===== CELL 42 | 6. How sure are we? =====
+# Is the gap between evening and morning real? t-test (two groups)
+evening = df_clean[df_clean['time_of_day'] == 'evening 17-20']['delayed']
+morning = df_clean[df_clean['time_of_day'] == 'morning 5-9']['delayed']
+
+diff = evening.mean() - morning.mean()
+se_diff = np.sqrt(evening.sem() ** 2 + morning.sem() ** 2)
+print('Evening minus morning:', round(diff * 100, 1), 'percentage points')
+print('95% CI:', round((diff - 1.96 * se_diff) * 100, 1), 'to', round((diff + 1.96 * se_diff) * 100, 1))
+print(stats.ttest_ind(evening, morning, equal_var=False))
+
+# ===== CELL 43 | 6. How sure are we? =====
+tod['mean'].plot(kind='bar', yerr=1.96 * tod['sem'], capsize=4)
+plt.axhline(pct_delayed, color='red', linestyle='--')
+plt.title('Share delayed by time of day, with 95% confidence interval')
+plt.ylabel('Share delayed')
+plt.xlabel('')
+plt.show()
+
+# ===== CELL 44 | 7. Predicting delay with regression =====
+# Split into training data (80%) and test data (20%) so we judge the model on flights it has not seen
+train = df_clean.sample(frac=0.8, random_state=1)
+test = df_clean.drop(train.index)
+print('Train:', len(train), ' Test:', len(test))
+
+# Baseline on the test set: predict the training average for every flight
+baseline_mae = (test['dep_delay'] - train['dep_delay'].mean()).abs().mean()
+print('Baseline error (MAE):', round(baseline_mae, 2), 'minutes')
+
+# ===== CELL 45 | 7. Predicting delay with regression =====
+# Model 1: weather only
+model_1 = smf.ols('dep_delay ~ temp + humid + wind_speed + precip + visib', data=train).fit()
+
+# Model 2: schedule and airline only (C() = treat as categories)
+model_2 = smf.ols('dep_delay ~ C(sched_hour) + C(month) + C(carrier) + origin', data=train).fit()
+
+# Model 3: both together
+model_3 = smf.ols('dep_delay ~ C(sched_hour) + C(month) + C(carrier) + origin + temp + humid + wind_speed + precip + visib',
+                  data=train).fit()
+
+# Compare on the test set
+results = []
+for name, m in [('1. Weather only', model_1), ('2. Schedule + airline', model_2), ('3. Both', model_3)]:
+    pred = m.predict(test)
+    ok = pred.notnull()
+    mae = (test['dep_delay'][ok] - pred[ok]).abs().mean()
+    results.append({'Model': name, 'R-squared (train)': round(m.rsquared, 3), 'Test MAE (minutes)': round(mae, 2)})
+results.append({'Model': 'Baseline (average)', 'R-squared (train)': 0, 'Test MAE (minutes)': round(baseline_mae, 2)})
+pd.DataFrame(results)
+
+# ===== CELL 46 | 7. Predicting delay with regression =====
+# Model 2 is our chosen model: adding weather (model 3) does not improve the test error
+# Full output: coefficients, 95% confidence intervals [0.025, 0.975] and p-values
+print(model_2.summary())
+
+# ===== CELL 47 | 7. Predicting delay with regression =====
+# Weather effects from model 3 (extra minutes of delay per unit), with 95% confidence intervals
+# They are statistically real but tiny - which is why they don't improve predictions
+weather_effects = model_3.conf_int().loc[['temp', 'humid', 'wind_speed', 'precip', 'visib']]
+weather_effects.columns = ['LOWER', 'UPPER']
+weather_effects['coef'] = model_3.params[['temp', 'humid', 'wind_speed', 'precip', 'visib']]
+weather_effects.round(2)
+
+# ===== CELL 48 | 7. Predicting delay with regression =====
+# Where does the model fail? Compare error for different sizes of delay
+test = test.copy()
+test['predicted'] = model_2.predict(test)
+test['error'] = (test['dep_delay'] - test['predicted']).abs()
+test['delay_group'] = pd.cut(test['dep_delay'], bins=[-100, 0, 15, 60, 180, 2000],
+                             labels=['early/on time', '1-15 min', '16-60 min', '61-180 min', '180+ min'])
+
+fails = test.groupby('delay_group', observed=True).agg(flights=('error', 'size'),
+                                                       avg_actual=('dep_delay', 'mean'),
+                                                       avg_predicted=('predicted', 'mean'),
+                                                       avg_error=('error', 'mean'))
+fails.round(1)
+
+# ===== CELL 49 | 7. Predicting delay with regression =====
+plt.scatter(test['predicted'], test['dep_delay'], alpha=0.1, s=5)
+plt.plot([-10, 40], [-10, 40], color='red')
+plt.ylim(-40, 300)
+plt.title('Predicted vs actual delay (test flights)')
+plt.xlabel('Predicted delay (minutes)')
+plt.ylabel('Actual delay (minutes)')
+plt.show()
+
+# ===== CELL 50 | 7. Predicting delay with regression =====
+# Even if minutes are hard to predict, can the model RANK flights by risk?
+# Split test flights into 10 equal groups by predicted delay, and check the real share delayed
+test['risk_group'] = pd.qcut(test['predicted'], 10, labels=range(1, 11))
+risk = test.groupby('risk_group', observed=True)['delayed'].agg(['mean', 'sem', 'size'])
+
+risk['mean'].plot(kind='bar', yerr=1.96 * risk['sem'], capsize=3)
+plt.axhline(test['delayed'].mean(), color='red', linestyle='--', label='Average')
+plt.title('Actual share delayed, by predicted risk group (1 = lowest, 10 = highest)')
+plt.xlabel('Risk group')
+plt.ylabel('Share delayed')
+plt.legend()
+plt.show()
+
+risk.round(3)
