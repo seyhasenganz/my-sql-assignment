@@ -5,7 +5,6 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from scipy import stats
 import statsmodels.formula.api as smf
 
@@ -103,9 +102,9 @@ print(missing_dates.head(10))
 print('Last weather day:', df_weather[df_weather['month'] == 12]['day'].max())
 
 # ===== CELL 12 | Do the unmatched flights have anything in common? =====
-missing_dates.head(10).sort_values().plot(kind='barh')
-plt.title('Flights without weather, by date (month, day)')
-plt.xlabel('Number of flights')
+missing_dates.head(10).plot(kind='bar')
+plt.ylabel('Flights without weather')
+plt.xlabel('Date (month, day)')
 plt.show()
 
 # ===== CELL 13 | Do the unmatched flights have anything in common? =====
@@ -156,7 +155,7 @@ print('Average delay of flights that left at 1-4am:',
 # ===== CELL 21 | Things that look wrong =====
 # Problem 5: the delay distribution is lopsided - a few very late flights pull the average up
 df['dep_delay'].plot(kind='hist', bins=100, edgecolor='white', range=(-30, 200))
-plt.title('Distribution of departure delay (minutes)')
+plt.title('Distribution of departure delay')
 plt.xlabel('Departure delay in minutes (negative = left early)')
 plt.show()
 
@@ -245,107 +244,109 @@ print('...but it never catches a single delay')
 # Chart 1: share of flights delayed, by scheduled hour
 hour_stats = df_clean.groupby('sched_hour')['delayed'].agg(['mean', 'sem', 'size'])
 hour_stats = hour_stats[hour_stats['size'] > 200]      # drop hours with very few flights
+hour_stats.index = hour_stats.index.astype(int)          # show 5 instead of 5.0
 
-hour_stats['mean'].plot(kind='bar', yerr=1.96 * hour_stats['sem'], capsize=3, figsize=(10, 5))
-plt.axhline(pct_delayed, color='red', linestyle='--', label='Average')
-plt.title('Share of flights delayed >15 min, by scheduled departure hour')
+hour_stats['mean'].plot(kind='bar', yerr=1.96 * hour_stats['sem'], capsize=4)
+plt.axhline(pct_delayed, color='red')   # the average of all flights
 plt.xlabel('Scheduled departure hour')
-plt.ylabel('Share delayed')
-plt.legend()
+plt.ylabel('Share of flights delayed')
 plt.show()
 
 # ===== CELL 32 | 5. What drives delay? =====
-# Chart 2: month x hour heatmap
-heat = df_clean[df_clean['sched_hour'] >= 5].groupby(['month', 'sched_hour'])['delayed'].mean().unstack()
+# Chart 2: share delayed by month
+month_stats = df_clean.groupby('month')['delayed'].agg(['mean', 'sem', 'size'])
 
-plt.figure(figsize=(12, 5))
-sns.heatmap(heat, cmap='Blues')
-plt.title('Share of flights delayed, by month and scheduled hour')
-plt.xlabel('Scheduled departure hour')
-plt.ylabel('Month')
+month_stats['mean'].plot(kind='bar', yerr=1.96 * month_stats['sem'], capsize=4)
+plt.axhline(pct_delayed, color='red')
+plt.xlabel('Month')
+plt.ylabel('Share of flights delayed')
 plt.show()
 
 # ===== CELL 33 | 5. What drives delay? =====
-# Chart 3: share delayed by month
-month_stats = df_clean.groupby('month')['delayed'].agg(['mean', 'sem', 'size'])
-
-month_stats['mean'].plot(kind='bar', yerr=1.96 * month_stats['sem'], capsize=3, figsize=(10, 5))
-plt.axhline(pct_delayed, color='red', linestyle='--', label='Average')
-plt.title('Share of flights delayed >15 min, by month')
-plt.xlabel('Month')
-plt.ylabel('Share delayed')
-plt.legend()
-plt.show()
-
-# ===== CELL 34 | 5. What drives delay? =====
-# Chart 4: share delayed by carrier
+# Chart 3: share delayed by carrier
 carrier_stats = df_clean.groupby('carrier')['delayed'].agg(['mean', 'sem', 'size']).sort_values('mean')
 
-carrier_stats['mean'].plot(kind='barh', xerr=1.96 * carrier_stats['sem'], capsize=3, figsize=(8, 5))
-plt.axvline(pct_delayed, color='red', linestyle='--', label='Average')
-plt.title('Share of flights delayed >15 min, by carrier')
-plt.xlabel('Share delayed')
-plt.legend()
+carrier_stats['mean'].plot(kind='bar', yerr=1.96 * carrier_stats['sem'], capsize=4)
+plt.axhline(pct_delayed, color='red')
+plt.xlabel('Carrier')
+plt.ylabel('Share of flights delayed')
 plt.show()
 
 carrier_stats
 
-# ===== CELL 35 | 5. What drives delay? =====
-# Chart 5: Seattle vs Portland, by month
-df_clean.groupby(['month', 'origin'])['delayed'].mean().unstack().plot(marker='o', figsize=(10, 5))
-plt.title('Share of flights delayed, Seattle vs Portland')
+# ===== CELL 34 | 5. What drives delay? =====
+# Chart 4: Seattle vs Portland, by month
+df_clean.groupby(['month', 'origin'])['delayed'].mean().unstack().plot()
 plt.xlabel('Month')
-plt.ylabel('Share delayed')
+plt.ylabel('Share of flights delayed')
 plt.show()
 
-# ===== CELL 36 | 5. What drives delay? =====
-# Chart 6: weather - put each measurement into bands and compare the share delayed
+# ===== CELL 35 | 5. What drives delay? =====
+# Chart 5: weather - put each measurement into bands and compare the share delayed
 df_clean['visib_band'] = pd.cut(df_clean['visib'], bins=[-1, 3, 9.9, 10], labels=['under 3 miles', '3-10 miles', '10 (clear)'])
 df_clean['wind_band'] = pd.cut(df_clean['wind_speed'], bins=[-1, 10, 20, 50], labels=['0-10 mph', '10-20 mph', '20+ mph'])
 df_clean['temp_band'] = pd.cut(df_clean['temp'], bins=[0, 32, 50, 70, 110], labels=['below 32 F', '32-50 F', '50-70 F', '70+ F'])
 df_clean['rain'] = np.where(df_clean['precip'] > 0, 'rain', 'no rain')
 
-fig, axes = plt.subplots(1, 4, figsize=(16, 4), sharey=True)
-for ax, col in zip(axes, ['visib_band', 'wind_band', 'temp_band', 'rain']):
-    s = df_clean.groupby(col, observed=True)['delayed'].agg(['mean', 'sem'])
-    s['mean'].plot(kind='bar', yerr=1.96 * s['sem'], capsize=3, ax=ax)
-    ax.axhline(pct_delayed, color='red', linestyle='--')
-    ax.set_title(col)
-    ax.set_xlabel('')
-axes[0].set_ylabel('Share delayed')
-plt.suptitle('Share of flights delayed in different weather')
-plt.tight_layout()
+visib_stats = df_clean.groupby('visib_band', observed=True)['delayed'].agg(['mean', 'sem', 'size'])
+visib_stats['mean'].plot(kind='bar', yerr=1.96 * visib_stats['sem'], capsize=4)
+plt.axhline(pct_delayed, color='red')
+plt.xlabel('Visibility')
+plt.ylabel('Share of flights delayed')
+plt.show()
+
+# ===== CELL 36 | 5. What drives delay? =====
+temp_stats = df_clean.groupby('temp_band', observed=True)['delayed'].agg(['mean', 'sem', 'size'])
+temp_stats['mean'].plot(kind='bar', yerr=1.96 * temp_stats['sem'], capsize=4)
+plt.axhline(pct_delayed, color='red')
+plt.xlabel('Temperature')
+plt.ylabel('Share of flights delayed')
 plt.show()
 
 # ===== CELL 37 | 5. What drives delay? =====
-# Chart 7: correlation of each number with departure delay
-cols = ['dep_delay', 'sched_hour', 'month', 'distance', 'temp', 'dewp', 'humid', 'wind_speed', 'precip', 'visib']
-
-plt.figure(figsize=(9, 7))
-sns.heatmap(df_clean[cols].corr().round(2), annot=True, cmap='coolwarm', vmin=-1, vmax=1)
-plt.title('Correlation between variables')
+wind_stats = df_clean.groupby('wind_band', observed=True)['delayed'].agg(['mean', 'sem', 'size'])
+wind_stats['mean'].plot(kind='bar', yerr=1.96 * wind_stats['sem'], capsize=4)
+plt.axhline(pct_delayed, color='red')
+plt.xlabel('Wind speed')
+plt.ylabel('Share of flights delayed')
 plt.show()
 
-df_clean[cols].corr()['dep_delay'].sort_values(ascending=False).round(3)
+# ===== CELL 38 | 5. What drives delay? =====
+rain_stats = df_clean.groupby('rain')['delayed'].agg(['mean', 'sem', 'size'])
+rain_stats['mean'].plot(kind='bar', yerr=1.96 * rain_stats['sem'], capsize=4)
+plt.axhline(pct_delayed, color='red')
+plt.xlabel('')
+plt.ylabel('Share of flights delayed')
+plt.show()
 
-# ===== CELL 38 | 6. How sure are we? =====
+# ===== CELL 39 | 5. What drives delay? =====
+# Chart 6: correlation of each number with departure delay (Session 3 style)
+cols = ['dep_delay', 'sched_hour', 'month', 'distance', 'temp', 'dewp', 'humid', 'wind_speed', 'precip', 'visib']
+
+corr_delay = df_clean[cols].corr()['dep_delay'].drop('dep_delay').sort_values()
+corr_delay.plot(kind='bar')
+plt.ylabel('Correlation with departure delay')
+plt.show()
+
+corr_delay.round(3)
+
+# ===== CELL 40 | 6. How sure are we? =====
 # How precise is our overall number? Take many random samples of 1,000 flights
 sample_means = [df_clean['delayed'].sample(1000).mean() for i in range(200)]
 
 plt.hist(sample_means, bins=20)
-plt.axvline(pct_delayed, color='red')
-plt.title('Share delayed in 200 random samples of 1,000 flights')
-plt.xlabel('Share delayed')
+plt.axvline(pct_delayed, color='red')   # the share delayed across all flights
+plt.xlabel('Share delayed in a sample of 1,000 flights')
 plt.ylabel('Number of samples')
 plt.show()
 
-# ===== CELL 39 | 6. How sure are we? =====
+# ===== CELL 41 | 6. How sure are we? =====
 # 95% confidence interval for the overall share delayed (all flights)
 sem = df_clean['delayed'].sem()
 print('Share delayed:', round(pct_delayed * 100, 2), '%')
 print('95% CI:', round((pct_delayed - 1.96 * sem) * 100, 2), '% to', round((pct_delayed + 1.96 * sem) * 100, 2), '%')
 
-# ===== CELL 40 | 6. How sure are we? =====
+# ===== CELL 42 | 6. How sure are we? =====
 # Confidence intervals for the comparisons that matter to the business
 df_clean['time_of_day'] = pd.cut(df_clean['sched_hour'], bins=[-1, 4, 9, 13, 16, 20, 23],
                                  labels=['night 0-4', 'morning 5-9', 'midday 10-13', 'afternoon 14-16', 'evening 17-20', 'late 21-23'])
@@ -355,7 +356,7 @@ tod['LOWER'] = tod['mean'] - 1.96 * tod['sem']
 tod['UPPER'] = tod['mean'] + 1.96 * tod['sem']
 tod.round(3)
 
-# ===== CELL 41 | 6. How sure are we? =====
+# ===== CELL 43 | 6. How sure are we? =====
 # Same table for weather conditions
 df_clean['freezing'] = np.where(df_clean['temp'] < 32, 'freezing', 'not freezing')
 df_clean['low_visib'] = np.where(df_clean['visib'] < 3, 'visibility < 3 mi', 'visibility 3+ mi')
@@ -366,7 +367,7 @@ for col in ['freezing', 'low_visib', 'rain', 'origin']:
     t['UPPER'] = t['mean'] + 1.96 * t['sem']
     print(t.round(3), '\n')
 
-# ===== CELL 42 | 6. How sure are we? =====
+# ===== CELL 44 | 6. How sure are we? =====
 # Is the gap between evening and morning real? t-test (two groups)
 evening = df_clean[df_clean['time_of_day'] == 'evening 17-20']['delayed']
 morning = df_clean[df_clean['time_of_day'] == 'morning 5-9']['delayed']
@@ -377,15 +378,14 @@ print('Evening minus morning:', round(diff * 100, 1), 'percentage points')
 print('95% CI:', round((diff - 1.96 * se_diff) * 100, 1), 'to', round((diff + 1.96 * se_diff) * 100, 1))
 print(stats.ttest_ind(evening, morning, equal_var=False))
 
-# ===== CELL 43 | 6. How sure are we? =====
+# ===== CELL 45 | 6. How sure are we? =====
 tod['mean'].plot(kind='bar', yerr=1.96 * tod['sem'], capsize=4)
-plt.axhline(pct_delayed, color='red', linestyle='--')
-plt.title('Share delayed by time of day, with 95% confidence interval')
-plt.ylabel('Share delayed')
-plt.xlabel('')
+plt.axhline(pct_delayed, color='red')
+plt.xlabel('Scheduled time of day')
+plt.ylabel('Share of flights delayed')
 plt.show()
 
-# ===== CELL 44 | 7. Predicting delay with regression =====
+# ===== CELL 46 | 7. Predicting delay with regression =====
 # Split into training data (80%) and test data (20%) so we judge the model on flights it has not seen
 train = df_clean.sample(frac=0.8, random_state=1)
 test = df_clean.drop(train.index)
@@ -395,7 +395,7 @@ print('Train:', len(train), ' Test:', len(test))
 baseline_mae = (test['dep_delay'] - train['dep_delay'].mean()).abs().mean()
 print('Baseline error (MAE):', round(baseline_mae, 2), 'minutes')
 
-# ===== CELL 45 | 7. Predicting delay with regression =====
+# ===== CELL 47 | 7. Predicting delay with regression =====
 # Model 1: weather only
 model_1 = smf.ols('dep_delay ~ temp + humid + wind_speed + precip + visib', data=train).fit()
 
@@ -416,12 +416,12 @@ for name, m in [('1. Weather only', model_1), ('2. Schedule + airline', model_2)
 results.append({'Model': 'Baseline (average)', 'R-squared (train)': 0, 'Test MAE (minutes)': round(baseline_mae, 2)})
 pd.DataFrame(results)
 
-# ===== CELL 46 | 7. Predicting delay with regression =====
+# ===== CELL 48 | 7. Predicting delay with regression =====
 # Model 2 is our chosen model: adding weather (model 3) does not improve the test error
 # Full output: coefficients, 95% confidence intervals [0.025, 0.975] and p-values
 print(model_2.summary())
 
-# ===== CELL 47 | 7. Predicting delay with regression =====
+# ===== CELL 49 | 7. Predicting delay with regression =====
 # Weather effects from model 3 (extra minutes of delay per unit), with 95% confidence intervals
 # They are statistically real but tiny - which is why they don't improve predictions
 weather_effects = model_3.conf_int().loc[['temp', 'humid', 'wind_speed', 'precip', 'visib']]
@@ -429,7 +429,7 @@ weather_effects.columns = ['LOWER', 'UPPER']
 weather_effects['coef'] = model_3.params[['temp', 'humid', 'wind_speed', 'precip', 'visib']]
 weather_effects.round(2)
 
-# ===== CELL 48 | 7. Predicting delay with regression =====
+# ===== CELL 50 | 7. Predicting delay with regression =====
 # Where does the model fail? Compare error for different sizes of delay
 test = test.copy()
 test['predicted'] = model_2.predict(test)
@@ -443,27 +443,23 @@ fails = test.groupby('delay_group', observed=True).agg(flights=('error', 'size')
                                                        avg_error=('error', 'mean'))
 fails.round(1)
 
-# ===== CELL 49 | 7. Predicting delay with regression =====
-plt.scatter(test['predicted'], test['dep_delay'], alpha=0.1, s=5)
-plt.plot([-10, 40], [-10, 40], color='red')
-plt.ylim(-40, 300)
-plt.title('Predicted vs actual delay (test flights)')
-plt.xlabel('Predicted delay (minutes)')
-plt.ylabel('Actual delay (minutes)')
+# ===== CELL 51 | 7. Predicting delay with regression =====
+# Session 3 style: bar chart of average actual vs average predicted delay in each group
+fails[['avg_actual', 'avg_predicted']].plot(kind='bar')
+plt.xlabel('Actual delay group')
+plt.ylabel('Minutes')
 plt.show()
 
-# ===== CELL 50 | 7. Predicting delay with regression =====
+# ===== CELL 52 | 7. Predicting delay with regression =====
 # Even if minutes are hard to predict, can the model RANK flights by risk?
 # Split test flights into 10 equal groups by predicted delay, and check the real share delayed
 test['risk_group'] = pd.qcut(test['predicted'], 10, labels=range(1, 11))
 risk = test.groupby('risk_group', observed=True)['delayed'].agg(['mean', 'sem', 'size'])
 
-risk['mean'].plot(kind='bar', yerr=1.96 * risk['sem'], capsize=3)
-plt.axhline(test['delayed'].mean(), color='red', linestyle='--', label='Average')
-plt.title('Actual share delayed, by predicted risk group (1 = lowest, 10 = highest)')
-plt.xlabel('Risk group')
-plt.ylabel('Share delayed')
-plt.legend()
+risk['mean'].plot(kind='bar', yerr=1.96 * risk['sem'], capsize=4)
+plt.axhline(test['delayed'].mean(), color='red')
+plt.xlabel('Predicted risk group (1 = lowest, 10 = highest)')
+plt.ylabel('Actual share of flights delayed')
 plt.show()
 
 risk.round(3)
