@@ -6,6 +6,8 @@
 #   3. Paste each "CELL" below into its own code cell, in order, and run.
 #   4. Put the matching markdown (narrative) cell above each one -
 #      see Flight_Weather_Delay_Analysis.ipynb for the text.
+#   Optional: also upload Flight_and_Weather_-_working.xlsx and CELL 3 will
+#   confirm the Python join matches your Excel lookup (1,769 unmatched).
 #   (Only need CELL 0 if you must rebuild the CSVs from the Excel file.)
 # =====================================================================
 
@@ -22,6 +24,7 @@
 # w = w[["origin","year","month","day","hour"] + wcols].drop_duplicates(["origin","year","month","day","hour"])
 # w.to_csv("weather.csv", index=False)
 # files.download("flights.csv"); files.download("weather.csv")
+
 
 
 # ===== CELL 1: SETUP - imports and chart style =====
@@ -89,6 +92,26 @@ matched = (df["_merge"] == "both")
 print(f"Flights in:            {len(flights):,}")
 print(f"Matched to weather:    {matched.sum():,} ({matched.mean():.1%})")
 print(f"No weather match:      {(~matched).sum():,} ({(~matched).mean():.1%})")
+
+# ---- Cross-check against our first attempt in Excel ----
+# In Excel we built Key_Flight = origin-year-month-day-hour (e.g. "SEA-2014-1-1-0") and used a lookup.
+# Rebuild the same key here and confirm Python gives the identical result.
+def make_key(t):
+    hr = t["hour"].astype("Int64").astype(str).replace("<NA>", "NA")
+    return t["origin"] + "-" + t["year"].astype(str) + "-" + t["month"].astype(str) + "-" + t["day"].astype(str) + "-" + hr
+
+flights["Key_Flight"] = make_key(flights)
+weather["Key_Flight"] = make_key(weather)
+excel_style = flights.merge(weather[["Key_Flight"]].assign(found=True), on="Key_Flight", how="left")
+n_miss = excel_style["found"].isna().sum()
+print(f"Excel-style key join: {len(excel_style) - n_miss:,} matched, {n_miss:,} unmatched "
+      f"-> same as the multi-column join: {n_miss == (~matched).sum()}")
+EXCEL = "Flight_and_Weather_-_working.xlsx"          # optional: only used if the file is uploaded too
+if os.path.exists(EXCEL):
+    xl = pd.read_excel(EXCEL)
+    xl_miss = xl.iloc[:, -1].isna().sum()                # last column = key returned by the Excel lookup (blank = no match)
+    print(f"Our Excel lookup left {xl_miss:,} flights without weather -> Python agrees: {xl_miss == (~matched).sum()}")
+flights.drop(columns="Key_Flight", inplace=True); weather.drop(columns="Key_Flight", inplace=True)
 
 
 # ===== CELL 4: REQ 1 - what the join cost: unmatched rows and what they have in common =====
