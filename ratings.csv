@@ -1,0 +1,15 @@
+rating_id,rating_code,disclaimer
+1,G,General Audiences. All ages admitted.
+2,PG,Parental Guidance Suggested. Some material may not be suitable for children.
+3,PG-13,Parents Strongly Cautioned. Some material may be inappropriate for children under 13.
+4,R,Restricted. Under 17 requires accompanying parent or adult guardian.
+5,NC-17,Adults Only. No one 17 and under admitted.
+6,NR,Not Rated. This title has not been submitted for a rating.
+7,UR,Unrated. This title was released without a rating (often an uncut version).
+8,TV-Y,All Children. Designed to be appropriate for all children.
+9,TV-Y7,Directed to Older Children. Suitable for children age 7 and above.
+10,TV-Y7-FV,Directed to Older Children - Fantasy Violence. Suitable for age 7 and above; contains fantasy violence.
+11,TV-G,General Audience. Suitable for all ages.
+12,TV-PG,Parental Guidance Suggested. May contain material unsuitable for younger children.
+13,TV-14,Parents Strongly Cautioned. May be unsuitable for children under 14.
+14,TV-MA,Mature Audience Only. Specifically designed for adults; may be unsuitable for children under 17.
