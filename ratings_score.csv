@@ -1,0 +1,7 @@
+rating_id,rating_code,disclaimer
+1,Excellent,Audience score 8.0-10.0: highly acclaimed by viewers
+2,Very Good,Audience score 7.0-7.9: well received by viewers
+3,Good,Audience score 6.0-6.9: generally favorable reviews
+4,Average,Audience score 5.0-5.9: mixed reviews
+5,Poor,Audience score 0.1-4.9: mostly negative reviews
+6,Not Rated,No audience score yet (0 votes)
