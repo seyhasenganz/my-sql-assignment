@@ -62,8 +62,36 @@ Why `campus` lives on `enrollment` and not on `student`: 70 students took course
 
 Verified: joining the tables back together reproduces every non-blank grade cell of the original CSV exactly (1,182 of 1,182).
 
+## Relationship diagram
+
+```mermaid
+erDiagram
+    STUDENT    ||--o{ ENROLLMENT : "takes"
+    COURSE     ||--o{ ENROLLMENT : "is taken in"
+    TERM       ||--o{ ENROLLMENT : "happens in"
+    CAMPUS     ||--o{ ENROLLMENT : "held at"
+    GRADE      ||--o{ ENROLLMENT : "awarded"
+    DISCIPLINE |o--o{ COURSE     : "groups"
+```
+
+| Relationship | Type | How it is implemented |
+|---|---|---|
+| student → enrollment | 1 : M | `enrollment.student_id` FK |
+| course → enrollment | 1 : M | `enrollment.course_code` FK |
+| term → enrollment | 1 : M | `enrollment.term_id` FK |
+| campus → enrollment | 1 : M | `enrollment.campus_id` FK |
+| grade → enrollment | 1 : M | `enrollment.grade_code` FK |
+| discipline → course | 1 : M | `course.discipline_id` FK |
+| **student ↔ course** | **M : N** | resolved by the `enrollment` junction table |
+| student ↔ term | M : N | through `enrollment` |
+| student ↔ campus | M : N | through `enrollment` |
+| course ↔ term / campus | M : N | through `enrollment` |
+
+There is no 1 : 1 relationship. `enrollment` is the bridge (junction) table that turns each M : N into two 1 : M relationships.
+
 ## Files
 
+* `summer_electives_schema.sql`: tables only (CREATE TABLE, no data).
 * `summer_electives_normalized.sql`: creates database `summer_electives`, all 7 tables, and inserts all data. Run it in MySQL Workbench (or `mysql < summer_electives_normalized.sql`).
 * `build_normalized.py`: regenerates the SQL from the CSV: `python3 build_normalized.py registrar.csv summer_electives_normalized.sql`
 
