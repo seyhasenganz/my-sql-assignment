@@ -7,6 +7,6 @@
 5. Restart the runtime and run all cells in order. Review results and explanations.
 6. Submit the .ipynb and hotels.csv as instructed.
 
-All eight code cells were executed successfully in this workspace in a fresh namespace; numerical results were reproduced. Colab itself has not been tested here. Markdown narrative is approximately 1426 words. CSV is unchanged from the official source.
+All eight code cells were executed successfully in this workspace in a fresh namespace; numerical results were reproduced. Colab itself has not been tested here. Markdown narrative is approximately 1478 words. CSV is unchanged from the official source.
 
 The notebook includes two models, six exam sections, outputs and charts, and test-only duplicate-weighting sensitivity. Category encoding, scaling, chronological evaluation and prediction metrics are explained additions to the classroom methods. Analysis_narrative.md is a reading copy, not an extra required submission.
