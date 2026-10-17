@@ -4,6 +4,26 @@ Collected Oct-2026 from public sources. **Re-check prices on the official pages 
 submitting** – cloud prices change, and several numbers below come from third-party guides.
 
 Legend: ✅ official vendor source · ⚠️ third-party source (verify)
+## Competitor Research (Word document version)
+
+Snowflake and Google BigQuery were compared against the same Build-A-Bear scenario: marketing and e-commerce analytics for about 18 users, data growing 50% per year, hourly dashboards and about 200 ad-hoc queries per month.
+
+**Pricing.** The two platforms charge in different ways. Snowflake bills for the *time* a virtual warehouse runs: about $2–3 per credit (Standard/Enterprise), where the smallest warehouse uses one credit per hour, billed per second, plus about $23–40 per TB of storage per month. BigQuery bills for the *data each query scans*: $6.25 per TiB, with the first 1 TiB per month free, plus about $20 per TB of storage. For a small, fast-growing workload, BigQuery's free tier makes it cheaper to start; Snowflake's costs are more predictable because auto-suspend and resource monitors cap spending. The full three-year cost, including migration, training and administration, is in the TCO model.
+
+**Scalability.** Both are fully managed and scale automatically. Snowflake separates storage and compute, so warehouses can be resized or multiplied for holiday peaks without affecting other users. BigQuery is serverless and allocates capacity per query, so there is nothing to size at all.
+
+**Usability.** Both use standard SQL. In my trial, Snowflake took me from sign-up to loaded data and working users in [X hours], and its role-based access made adding external and instructor users simple. Reviewers rate Snowflake slightly higher (Gartner Peer Insights 4.7 vs 4.5; G2 4.6 vs 4.5). BigQuery requires learning Google Cloud projects and IAM permissions.
+
+**Business fit.** BigQuery fits Google's marketing tools natively: Google Ads data can be loaded with Google's own transfer service. Snowflake fits a wider company strategy: it runs on AWS, Azure and Google Cloud, avoids lock-in, and lets agencies and licensing partners query shared data securely without copying it. Both offer European regions for Build-A-Bear's U.K. and Irish data.
+
+**Customer feedback.** Users of both platforms raise cost control as the main concern. Snowflake can become expensive if warehouses are oversized or left running; BigQuery can surprise users when careless queries scan large tables. Each risk has a matching control, which becomes part of the recommendation.
+
+*Prices are public list prices (US region, October 2026) from Google's pricing page and published Snowflake pricing guides; see sources.*
+
+---
+
+# Full research notes (backup / appendix)
+
 
 ## 1. Public price list
 
