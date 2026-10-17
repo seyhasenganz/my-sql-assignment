@@ -7,6 +7,28 @@ company I want to work for). Internal pitch to the **CTO (Dara Meath)** and **CM
 teddy-bear retailer (472k website sessions, 32k orders, 2012–2015). It stands in for Build-A-Bear's
 own e-commerce data, which is not public.
 
+## Business Scenario (Word document version)
+
+**Company.** Build-A-Bear Workshop (NYSE: BBW) is a specialty retailer of customizable stuffed animals, headquartered in St. Louis, Missouri, with about 5,500 employees. FY2026 revenue was $529.8M, and 92% came from direct-to-consumer sales through its stores and two e-commerce sites in the U.S., Canada, the U.K. and Ireland (source: FY2026 10-K via PitchBook).
+
+**Problem.** In August 2026 the company cut its revenue guidance to $500–525M because of falling store and web traffic. Marketing spend must therefore go to the channels that actually convert, yet ad, website and sales data sit in separate systems and channel reports are assembled by hand. My proof of concept on a sample teddy-bear e-commerce dataset (Maven Fuzzy Factory) shows the risk: one paid search channel produces 58% of revenue, while paid social converts at only 3.2% compared with 8.9% for brand search.
+
+**Business question.** Which marketing channels drive direct-to-consumer revenue most efficiently, and which platform, Snowflake or Google BigQuery, supports this analysis best at the lowest three-year cost?
+
+**Users.** Three marketing analysts, ten marketing managers who view dashboards, three executives (CMO, CTO, CFO) and two or three agency and licensing partners who need read-only access.
+
+**Workload.** Website sessions, pageviews, orders, refunds and ad data, growing about 50% per year; dashboards refreshed hourly; about 200 ad-hoc queries per month; seasonal peaks around holidays; U.S. and European data.
+
+**Budget.** $150,000 over three years (about $50,000 per year) for platform, connectors, migration, training and administration. This is about 0.01% of annual revenue and is repaid by improving direct-to-consumer revenue by roughly 0.01%.
+
+**Success criteria.** Daily automated channel dashboard instead of a weekly manual report; 80% less analyst reporting time; 10% of ad spend shifted to higher-converting channels; three-year cost within budget; role-based, MFA-protected access for every user.
+
+*Budget, users and workload are my assumptions; Build-A-Bear's actual data platform is not public.*
+
+---
+
+# Full version (backup / appendix)
+
 ---
 
 ## 1. Company (real, public facts)
