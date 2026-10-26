@@ -2,6 +2,8 @@
 -- 01_SETUP_AND_LOAD.sql
 -- Maven Fuzzy Factory (toy-store e-commerce) -> Snowflake
 -- Run as ACCOUNTADMIN in a Snowsight SQL worksheet, top to bottom.
+-- Every object is fully qualified (DATABASE.SCHEMA.OBJECT) so nothing can
+-- land in the default PUBLIC schema by accident.
 -- =====================================================================
 
 USE ROLE ACCOUNTADMIN;
@@ -29,7 +31,7 @@ USE SCHEMA FUZZY_FACTORY_DB.ECOMMERCE;
 -- 3. File format: comma-separated, 1 header row, the text NULL = real NULL,
 --    some timestamps are wrapped in double quotes
 -- ---------------------------------------------------------------------
-CREATE OR REPLACE FILE FORMAT CSV_FORMAT
+CREATE OR REPLACE FILE FORMAT FUZZY_FACTORY_DB.ECOMMERCE.CSV_FORMAT
   TYPE = CSV
   FIELD_DELIMITER = ','
   SKIP_HEADER = 1
@@ -40,18 +42,19 @@ CREATE OR REPLACE FILE FORMAT CSV_FORMAT
 -- ---------------------------------------------------------------------
 -- 4. Stage: a landing area for the CSV files
 -- ---------------------------------------------------------------------
-CREATE OR REPLACE STAGE RAW_STAGE FILE_FORMAT = CSV_FORMAT;
+CREATE OR REPLACE STAGE FUZZY_FACTORY_DB.ECOMMERCE.RAW_STAGE
+  FILE_FORMAT = FUZZY_FACTORY_DB.ECOMMERCE.CSV_FORMAT;
 
 -- ---------------------------------------------------------------------
 -- 5. Tables (6 tables, ~1.7M rows in total)
 -- ---------------------------------------------------------------------
-CREATE OR REPLACE TABLE PRODUCTS (
+CREATE OR REPLACE TABLE FUZZY_FACTORY_DB.ECOMMERCE.PRODUCTS (
   product_id      INTEGER PRIMARY KEY,
   created_at      TIMESTAMP_NTZ,
   product_name    VARCHAR(100)
 );
 
-CREATE OR REPLACE TABLE WEBSITE_SESSIONS (
+CREATE OR REPLACE TABLE FUZZY_FACTORY_DB.ECOMMERCE.WEBSITE_SESSIONS (
   website_session_id  INTEGER PRIMARY KEY,
   created_at          TIMESTAMP_NTZ,
   user_id             INTEGER,
@@ -63,14 +66,14 @@ CREATE OR REPLACE TABLE WEBSITE_SESSIONS (
   http_referer        VARCHAR(100)
 );
 
-CREATE OR REPLACE TABLE WEBSITE_PAGEVIEWS (
+CREATE OR REPLACE TABLE FUZZY_FACTORY_DB.ECOMMERCE.WEBSITE_PAGEVIEWS (
   website_pageview_id INTEGER PRIMARY KEY,
   created_at          TIMESTAMP_NTZ,
   website_session_id  INTEGER,
   pageview_url        VARCHAR(100)
 );
 
-CREATE OR REPLACE TABLE ORDERS (
+CREATE OR REPLACE TABLE FUZZY_FACTORY_DB.ECOMMERCE.ORDERS (
   order_id            INTEGER PRIMARY KEY,
   created_at          TIMESTAMP_NTZ,
   website_session_id  INTEGER,
@@ -81,7 +84,7 @@ CREATE OR REPLACE TABLE ORDERS (
   cogs_usd            NUMBER(10,2)
 );
 
-CREATE OR REPLACE TABLE ORDER_ITEMS (
+CREATE OR REPLACE TABLE FUZZY_FACTORY_DB.ECOMMERCE.ORDER_ITEMS (
   order_item_id   INTEGER PRIMARY KEY,
   created_at      TIMESTAMP_NTZ,
   order_id        INTEGER,
@@ -91,7 +94,7 @@ CREATE OR REPLACE TABLE ORDER_ITEMS (
   cogs_usd        NUMBER(10,2)
 );
 
-CREATE OR REPLACE TABLE ORDER_ITEM_REFUNDS (
+CREATE OR REPLACE TABLE FUZZY_FACTORY_DB.ECOMMERCE.ORDER_ITEM_REFUNDS (
   order_item_refund_id INTEGER PRIMARY KEY,
   created_at           TIMESTAMP_NTZ,
   order_item_id        INTEGER,
@@ -101,32 +104,38 @@ CREATE OR REPLACE TABLE ORDER_ITEM_REFUNDS (
 
 -- ---------------------------------------------------------------------
 -- 6. UPLOAD THE FILES TO THE STAGE (manual step in Snowsight, not SQL)
---    Catalog (Data) -> Databases -> FUZZY_FACTORY_DB -> ECOMMERCE -> Stages
---    -> RAW_STAGE -> "+ Files" -> select these 6 CSVs -> Upload:
+--    Databases -> FUZZY_FACTORY_DB -> ECOMMERCE -> Stages -> RAW_STAGE
+--    -> "+ Files" -> select these 6 CSVs -> Upload:
 --      products.csv, website_sessions.csv, website_pageviews.csv,
 --      orders.csv, order_items.csv, order_item_refunds.csv
 --    (Skip maven_fuzzy_factory_data_dictionary.csv - it is documentation.)
 -- ---------------------------------------------------------------------
-LIST @RAW_STAGE;   -- should show the 6 files
+LIST @FUZZY_FACTORY_DB.ECOMMERCE.RAW_STAGE;   -- should show the 6 files
 
 -- ---------------------------------------------------------------------
 -- 7. Load stage -> tables
 -- ---------------------------------------------------------------------
-COPY INTO PRODUCTS           FROM @RAW_STAGE FILES = ('products.csv');
-COPY INTO WEBSITE_SESSIONS   FROM @RAW_STAGE FILES = ('website_sessions.csv');
-COPY INTO WEBSITE_PAGEVIEWS  FROM @RAW_STAGE FILES = ('website_pageviews.csv');
-COPY INTO ORDERS             FROM @RAW_STAGE FILES = ('orders.csv');
-COPY INTO ORDER_ITEMS        FROM @RAW_STAGE FILES = ('order_items.csv');
-COPY INTO ORDER_ITEM_REFUNDS FROM @RAW_STAGE FILES = ('order_item_refunds.csv');
+COPY INTO FUZZY_FACTORY_DB.ECOMMERCE.PRODUCTS
+  FROM @FUZZY_FACTORY_DB.ECOMMERCE.RAW_STAGE FILES = ('products.csv');
+COPY INTO FUZZY_FACTORY_DB.ECOMMERCE.WEBSITE_SESSIONS
+  FROM @FUZZY_FACTORY_DB.ECOMMERCE.RAW_STAGE FILES = ('website_sessions.csv');
+COPY INTO FUZZY_FACTORY_DB.ECOMMERCE.WEBSITE_PAGEVIEWS
+  FROM @FUZZY_FACTORY_DB.ECOMMERCE.RAW_STAGE FILES = ('website_pageviews.csv');
+COPY INTO FUZZY_FACTORY_DB.ECOMMERCE.ORDERS
+  FROM @FUZZY_FACTORY_DB.ECOMMERCE.RAW_STAGE FILES = ('orders.csv');
+COPY INTO FUZZY_FACTORY_DB.ECOMMERCE.ORDER_ITEMS
+  FROM @FUZZY_FACTORY_DB.ECOMMERCE.RAW_STAGE FILES = ('order_items.csv');
+COPY INTO FUZZY_FACTORY_DB.ECOMMERCE.ORDER_ITEM_REFUNDS
+  FROM @FUZZY_FACTORY_DB.ECOMMERCE.RAW_STAGE FILES = ('order_item_refunds.csv');
 
 -- ---------------------------------------------------------------------
 -- 8. Check row counts. Expected:
 --    PRODUCTS 4 | WEBSITE_SESSIONS 472,871 | WEBSITE_PAGEVIEWS 1,188,124
 --    ORDERS 32,313 | ORDER_ITEMS 40,025 | ORDER_ITEM_REFUNDS 1,731
 -- ---------------------------------------------------------------------
-SELECT 'PRODUCTS' AS table_name, COUNT(*) AS row_count FROM PRODUCTS
-UNION ALL SELECT 'WEBSITE_SESSIONS',   COUNT(*) FROM WEBSITE_SESSIONS
-UNION ALL SELECT 'WEBSITE_PAGEVIEWS',  COUNT(*) FROM WEBSITE_PAGEVIEWS
-UNION ALL SELECT 'ORDERS',             COUNT(*) FROM ORDERS
-UNION ALL SELECT 'ORDER_ITEMS',        COUNT(*) FROM ORDER_ITEMS
-UNION ALL SELECT 'ORDER_ITEM_REFUNDS', COUNT(*) FROM ORDER_ITEM_REFUNDS;
+SELECT 'PRODUCTS' AS table_name, COUNT(*) AS row_count FROM FUZZY_FACTORY_DB.ECOMMERCE.PRODUCTS
+UNION ALL SELECT 'WEBSITE_SESSIONS',   COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.WEBSITE_SESSIONS
+UNION ALL SELECT 'WEBSITE_PAGEVIEWS',  COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.WEBSITE_PAGEVIEWS
+UNION ALL SELECT 'ORDERS',             COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.ORDERS
+UNION ALL SELECT 'ORDER_ITEMS',        COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.ORDER_ITEMS
+UNION ALL SELECT 'ORDER_ITEM_REFUNDS', COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.ORDER_ITEM_REFUNDS;
