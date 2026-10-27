@@ -10,7 +10,7 @@ Target: **about 2:30** (instructions 2–3 min; rubric 1–2 min → keep it tig
 **Open these, in this order:**
 1. **Tab 1 – Slides** (present full screen).
 2. **Tab 2 – Snowflake as SSENG**, with three worksheets ready:
-   - **A:** `01_setup_and_load.sql`, scrolled to the `COPY INTO` lines, plus the row-count query below.
+   - **A:** `01_setup_and_load.sql`, scrolled to the `COPY INTO` lines, plus the table-overview query below.
    - **B:** Databases → FUZZY_FACTORY_DB → ECOMMERCE → **Stages → RAW_STAGE** (shows the 6 files).
    - **C:** new SQL file with the **ACCESS SQL** below.
 3. **Window 2 – Incognito** at `https://jdkuhsr-qk22783.snowflakecomputing.com`.
@@ -19,12 +19,28 @@ Target: **about 2:30** (instructions 2–3 min; rubric 1–2 min → keep it tig
 
 **Don’t re-upload files or re-run COPY INTO on camera** – the data is already loaded, Snowflake would skip the files. Just *show* them.
 
-### Row-count query (worksheet A)
+### Table-overview query (worksheet A)
 ```sql
-SELECT 'ORDERS' AS table_name, COUNT(*) AS row_count FROM FUZZY_FACTORY_DB.ECOMMERCE.ORDERS
-UNION ALL SELECT 'WEBSITE_SESSIONS', COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.WEBSITE_SESSIONS
-UNION ALL SELECT 'WEBSITE_PAGEVIEWS', COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.WEBSITE_PAGEVIEWS;
+-- Show my 6 tables: how many rows and how much space each one uses
+SELECT table_name,
+       row_count,
+       ROUND(bytes / 1024 / 1024, 2) AS size_mb
+FROM FUZZY_FACTORY_DB.INFORMATION_SCHEMA.TABLES
+WHERE table_schema = 'ECOMMERCE'
+
+UNION ALL
+
+-- Add a TOTAL line at the bottom
+SELECT 'TOTAL',
+       SUM(row_count),
+       ROUND(SUM(bytes) / 1024 / 1024, 2)
+FROM FUZZY_FACTORY_DB.INFORMATION_SCHEMA.TABLES
+WHERE table_schema = 'ECOMMERCE'
+
+ORDER BY CASE WHEN table_name = 'TOTAL' THEN 1 ELSE 0 END,   -- TOTAL goes last
+         row_count DESC;                                       -- biggest table first
 ```
+Expected: 6 tables + TOTAL 1,735,068 rows, about 19 MB.
 
 ### ACCESS SQL (worksheet C)
 ```sql
@@ -70,10 +86,10 @@ ALTER USER DEMO_VIEWER SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQU
 **Show:**
 1. Worksheet **B**: RAW_STAGE with the 6 files.
 2. Worksheet **A**: highlight the `COPY INTO` lines.
-3. Run the **row-count query** → 32,313 orders.
+3. Run the **table-overview query** → 6 tables + TOTAL 1,735,068 rows, ~19 MB.
 
 **Say:**
-> Here are my six files in the stage. And here’s the COPY INTO command that loaded them. Let’s check it worked… 32,313 orders, all there.
+> Here are my six files in the stage. And here’s the COPY INTO command that loaded them. Let’s check it worked. This shows all six tables – 1.7 million rows, only 19 megabytes. Everything is there.
 
 ### Part 4 · SLIDE 3 – “Snowflake is like an office building” (0:55–1:10)
 **Show:** Slide 3 – point at each card from left to right.
