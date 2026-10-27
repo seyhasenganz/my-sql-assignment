@@ -29,7 +29,7 @@ Part two: pros and cons. Price: BigQuery is cheaper to start, but you pay for ho
 
 ## Slide 7 – What customers say: nearly tied, same worry
 
-Real users agree they’re close. Snowflake gets 4.7 stars on Gartner, BigQuery 4.5. And both groups have the same worry: surprise bills. So reviews alone can’t decide this.
+Online reviews rate both tools almost the same – about four and a half stars out of five. And users of both complain about the same thing: bills that are higher than expected. So reviews can’t pick a winner for us.
 
 ## Slide 8 – 3-year cost: BigQuery is 11% cheaper  ← Step 6 part 3: pricing comparison
 
