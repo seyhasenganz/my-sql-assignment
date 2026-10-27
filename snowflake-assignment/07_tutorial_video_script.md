@@ -12,6 +12,21 @@ Flow: **the data → how it got in → who can see it (users, roles, MFA) → li
 
 ---
 
+## Recording flow: slides + Snowflake (~2:30)
+Tutorial slides: https://claude.ai/artifact/TjcNk3FwiaWq9xkzJcA4Ak (speaker notes = what to say)
+
+| Part | Show | Time |
+|---|---|---|
+| 1 | **Slide 1** – title / hook | 0:00–0:10 |
+| 2 | **Slide 2** – the 6 tables + "how it got in" (CSV → stage → COPY INTO) → **switch to Snowflake**: RAW_STAGE, COPY lines, row count | 0:10–0:55 |
+| 3 | **Slide 3** – key card idea (role, user, grant, MFA) → **switch to Snowflake**: run steps 1–3 | 0:55–1:45 |
+| 4 | **Snowflake** – log in as DEMO_VIEWER, MFA, SELECT works, DELETE denied | 1:45–2:25 |
+| 5 | **Slide 4** – recap and thanks | 2:25–2:35 |
+
+Slides total ≈ 35 seconds; the rest is the live Snowflake demo.
+
+---
+
 ## Before you hit record – prepare these tabs
 1. **Slide / image:** the "Data loaded" table (6 tables, 1,735,068 rows, 19 MB) – screenshot from `06_poc_measurements.md`.
 2. **Window 1 (normal, SSENG):**
