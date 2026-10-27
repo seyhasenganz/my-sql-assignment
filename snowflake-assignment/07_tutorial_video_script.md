@@ -40,14 +40,14 @@ Expected: PRODUCTS 4 … WEBSITE_PAGEVIEWS 1,188,124, then TOTAL 1,735,068.
 ```sql
 USE ROLE ACCOUNTADMIN;
 
--- STEP 1: make the key card (a role) and choose which doors it opens
+-- STEP 1: create a role = what the person may do (read my tables only)
 CREATE ROLE IF NOT EXISTS FUZZY_READER;
 GRANT USAGE  ON WAREHOUSE FUZZY_WH                              TO ROLE FUZZY_READER;
 GRANT USAGE  ON DATABASE  FUZZY_FACTORY_DB                      TO ROLE FUZZY_READER;
 GRANT USAGE  ON SCHEMA    FUZZY_FACTORY_DB.ECOMMERCE            TO ROLE FUZZY_READER;
 GRANT SELECT ON ALL TABLES IN SCHEMA FUZZY_FACTORY_DB.ECOMMERCE TO ROLE FUZZY_READER;
 
--- STEP 2: create the person (the user)
+-- STEP 2: create a user = the person
 CREATE USER DEMO_VIEWER
   PASSWORD = '<your password>'          -- type your real password here in Snowflake only
   EMAIL = 'seyhasenganz@gmail.com'
@@ -57,7 +57,7 @@ CREATE USER DEMO_VIEWER
   DEFAULT_NAMESPACE = 'FUZZY_FACTORY_DB.ECOMMERCE'
   MUST_CHANGE_PASSWORD = FALSE;
 
--- STEP 3: hand over the key card, and require MFA
+-- STEP 3: give the role to the user, and require MFA
 GRANT ROLE FUZZY_READER TO USER DEMO_VIEWER;
 ALTER USER DEMO_VIEWER SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQUIRE_MFA;
 ```
@@ -85,19 +85,19 @@ ALTER USER DEMO_VIEWER SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQU
 **Say:**
 > Here are my six files in the stage. And here’s the COPY INTO command that loaded them. Let’s check it worked. Here are all six tables – 1.7 million rows in total. Everything is there.
 
-### Part 4 · SLIDE 3 – “Snowflake is like an office building” (0:55–1:10)
-**Show:** Slide 3 – point at each card from left to right.
+### Part 4 · SLIDE 3 – “Giving someone access: 3 steps” (0:55–1:10)
+**Show:** Slide 3 – point at cards 1, 2, 3, then the MFA line.
 **Say:**
-> Now, who can see this data? Think of Snowflake like an office building. A role is a key card. A user is a person. We make the key card, create the person, and hand it over – three steps. Plus MFA, a code from your phone, so a password alone isn’t enough.
+> Now, who can see this data? Giving someone access takes three steps. One: create a role – that’s what the person is allowed to do. Mine can only read my tables. Two: create the user – that’s the person. Three: connect them – give the role to the user. And with MFA, they need their password and a code from their phone to log in.
 
 ### Part 5 · SNOWFLAKE – the three steps (1:10–1:45)
 **Show:** Worksheet **C**. Highlight each step, then click **Run**.
 
 | Step | Highlight & run | Say |
 |---|---|---|
-| 1 | STEP 1 lines | “Step one: make the key card. This role can use the computer that runs queries and open my tables – but only to SELECT. That means read only.” |
-| 2 | STEP 2 lines | “Step two: create the person – a name, password and email. TYPE equals PERSON means a real human, and they land straight in the right data.” |
-| 3 | STEP 3 lines | “Step three: hand over the key card – and turn on MFA.” |
+| 1 | STEP 1 lines | “Step one: create the role. It can use the computer that runs queries and open my tables – but only to SELECT. That means read only.” |
+| 2 | STEP 2 lines | “Step two: create the user – a name, password and email. TYPE equals PERSON means a real human, and they land straight in the right data.” |
+| 3 | STEP 3 lines | “Step three: give the role to the user – and turn on MFA.” |
 
 ### Part 6 · SNOWFLAKE – test as the new user (1:45–2:25)
 **Show and say:**
@@ -112,13 +112,13 @@ ALTER USER DEMO_VIEWER SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQU
 ### Part 7 · SLIDE 4 – “Recap: safe sharing in 4 moves” (2:25–2:35)
 **Show:** Slide 4.
 **Say:**
-> So, the user can read the data, but can’t delete anything. I did the same for my test user and both instructors. Load the data, make the key card, hand it over, add MFA. Thanks for watching!
+> So, the user can read the data, but can’t delete anything. I did the same for my test user and both instructors. Load the data, create a role, create a user, connect them, and add MFA. Thanks for watching!
 
 ---
 
 ## Tips
 - **Smile and keep a good pace** – energy matters more than perfection.
-- Say the two pictures slowly: **stage = waiting room for files**, **role = key card**.
+- Say slowly: **stage = waiting room for files**, and the **3 steps: role → user → connect them**.
 - Pause one second after each **Run** so viewers see the result.
 - Small mistake? Keep going. Running long? Shorten Part 3 first – users and access are what this video is graded on.
 
