@@ -17,7 +17,7 @@ So I tried a test. I loaded a public data set from an online teddy bear shop int
 
 ## Slide 4 – Two contenders, two ways to bill you  ← Step 6 part 1: purpose of each product
 
-Part one: what are these two tools? Both are cloud data warehouses. They let a company keep all its data in one place online and analyze it quickly. Snowflake works on the Amazon, Microsoft or Google cloud. You pay for the time your computer power is switched on. BigQuery is made by Google. You pay for how much data each question reads, and the first terabyte each month is free.
+Part one: what are these two tools? Both are cloud data warehouses. They let a company keep all its data in one place online and analyze it quickly. Snowflake works on the Amazon, Microsoft or Google cloud. You pay for the time your computer power is switched on. BigQuery is made by Google. You pay for how much data your questions read, and small users often pay nothing, because Google gives some free use every month.
 
 ## Slide 5 – My Snowflake proof of concept in numbers
 
