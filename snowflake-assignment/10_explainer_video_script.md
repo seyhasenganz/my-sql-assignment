@@ -1,7 +1,7 @@
 # Explainer Video Script (4–6 min) – Snowflake vs BigQuery for Build-A-Bear
 
 Slides: https://claude.ai/artifact/XHSnt1LJPXhKJ3xC71nazT (each slide’s speaker notes = this script).
-Total ≈ 701 words ≈ 5.0 minutes at a relaxed pace. Say it in your own words – it does not need to be word-perfect.
+Total ≈ 755 words ≈ 5.4 minutes at a relaxed pace. Say it in your own words – it does not need to be word-perfect.
 
 ## Slide 1 – Snowflake or BigQuery?  ← persona
 
@@ -9,7 +9,7 @@ Hi, I’m Seyha. Imagine I work on the data team at Build-A-Bear Workshop, the t
 
 ## Slide 2 – The problem: traffic is down, every ad dollar counts  ← persona background
 
-Quick background. Build-A-Bear sells about 530 million dollars a year, mostly through its own stores and websites in the US, Canada, the UK and Ireland. This year fewer shoppers are coming in, so the company lowered its sales forecast. That means every marketing dollar has to count. But today our data is spread out, and reports are made by hand. We can’t easily see which ads bring in sales.
+Quick background. If you haven’t heard of it, Build-A-Bear is the store where kids make their own teddy bear. They pick an animal, stuff it, put a little heart inside, give it a name and dress it up. The company started in 1997, has about 5,500 employees, and is listed on the New York Stock Exchange. It sells about 530 million dollars a year, mostly through its own stores and websites in the US, Canada, the UK and Ireland. This year fewer shoppers are coming in, so the company lowered its sales forecast. That means every marketing dollar has to count. But today our data is spread out, and reports are made by hand. We can’t easily see which ads bring in sales.
 
 ## Slide 3 – What the data shows: one channel carries the business
 
