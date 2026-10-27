@@ -25,7 +25,7 @@ Here’s my Snowflake test in numbers. I loaded 1.7 million rows in one afternoo
 
 ## Slide 6 – Pros and cons on the four criteria  ← Step 6 part 2: pros and cons
 
-Part two: pros and cons. Price: BigQuery is cheaper to start, but you pay for how much data each question reads – so one badly written question on a big table can cost a lot. Snowflake is easier to predict. Scalability: both grow easily, for example during the holidays. Ease of use: both use SQL, but I found Snowflake simpler to set up. Business fit: BigQuery fits well with Google Ads. Snowflake works on any cloud and makes sharing data with partners easy.
+Part two: pros and cons. Price: BigQuery is cheaper to start, but you pay for how much data each question reads – so one badly written question on a big table can cost a lot. Snowflake is easier to predict: you pay for the time you use, and you can set a monthly spending limit. Scalability: both grow easily, for example during the holidays. Ease of use: both use SQL, but I found Snowflake simpler to set up. Business fit: BigQuery fits well with Google Ads. Snowflake works on any cloud and makes sharing data with partners easy.
 
 ## Slide 7 – What customers say: nearly tied, same worry
 
