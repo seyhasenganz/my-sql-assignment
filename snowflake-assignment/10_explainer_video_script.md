@@ -1,52 +1,52 @@
 # Explainer Video Script (4–6 min) – Snowflake vs BigQuery for Build-A-Bear
 
-Slides: https://claude.ai/artifact/XHSnt1LJPXhKJ3xC71nazT (speaker notes = this script).
-Total ≈ 789 words ≈ 5.6 min at a natural pace (140 words/min).
+Slides: https://claude.ai/artifact/XHSnt1LJPXhKJ3xC71nazT (each slide’s speaker notes = this script).
+Total ≈ 810 words ≈ 5.8 minutes at a relaxed pace. Speak like you are explaining it to a friend – it does not need to be word-perfect.
 
-### Slide 1 – cover
+## Slide 1 – Snowflake or BigQuery?  (~24 sec)
 
-Hi, I’m Seyha. Imagine I’m on Build-A-Bear Workshop’s e-commerce analytics team, and today I’m pitching to our CTO and CMO. The question is simple: should we build our marketing analytics on Snowflake or on Google BigQuery? I tested Snowflake hands-on, researched BigQuery, and priced both over three years. Let’s go.
+Hi, I’m Seyha. Let’s say I work on the data team at Build-A-Bear Workshop. Today I want to answer one question for our leaders: should we use Snowflake or Google BigQuery for our marketing data? I tried Snowflake myself, I looked into BigQuery, and I compared the cost over three years. Let’s see which one wins.
 
-### Slide 2 – problem
+## Slide 2 – The problem: traffic is down, every ad dollar counts  (~31 sec)
 
-First, the business. Build-A-Bear made 529.8 million dollars last year, 92 percent of it direct from customers – stores and two e-commerce sites. In August the company cut its revenue guidance, citing traffic pressure. With fewer visitors, every marketing dollar must work harder. But ad, website and sales data live in separate systems, so channel reports are built by hand. We can’t quickly see which marketing pays off.
+First, a bit about Build-A-Bear. Last year they made about 530 million dollars. Most of it, 92 percent, comes straight from customers, in stores and online. But in August they lowered their sales forecast, because fewer people are coming in. So every marketing dollar really matters now. The problem is, the data sits in different systems, and reports are made by hand. It’s hard to see quickly which ads actually work.
 
-### Slide 3 – poc-insight
+## Slide 3 – What the data shows: one channel carries the business  (~34 sec)
 
-To prove the idea, I loaded a public dataset from a teddy-bear online store into Snowflake and asked: which channels bring revenue, and which convert best? One paid Google channel brings 58 percent of all revenue – that’s concentration risk. Brand search converts at almost 9 percent, paid social at only 3.2. That’s the insight marketing needs every day, not once a quarter.
+To test the idea, I took a public dataset from an online teddy bear store and loaded it into Snowflake. Then I asked a simple question: which marketing channels bring in money, and which ones turn visitors into buyers? Look at this. One paid Google channel brings in 58 percent of all the money. That’s a lot of eggs in one basket. Brand search turns almost 9 percent of visitors into buyers. Paid social? Only about 3 percent.
 
-### Slide 4 – contenders
+## Slide 4 – Two contenders, two ways to bill you  (~32 sec)
 
-Meet the contenders. Snowflake is a cloud data warehouse that runs on AWS, Azure or Google, with storage and compute separate. You pay for time – credits for every hour a warehouse runs. BigQuery is Google Cloud’s serverless warehouse – nothing to size or switch off. You pay for the data each query scans: 6.25 dollars per terabyte, first terabyte a month free. Same goal, very different bills.
+So, who are the two options? Snowflake is a data warehouse in the cloud. It works on Amazon, Microsoft or Google. You pay for time – basically, how long your computing power is switched on. BigQuery is Google’s data warehouse. There’s nothing to switch on or off. You pay for how much data each query reads, and the first terabyte every month is free. Same job, but a very different way of charging you.
 
-### Slide 5 – poc
+## Slide 5 – My Snowflake proof of concept in numbers  (~36 sec)
 
-My Snowflake test, in numbers: 1.7 million rows loaded in an afternoon, compressed from 103 to 19 megabytes. The channel analysis ran in 1.3 seconds on the smallest warehouse, and the whole test cost about 1.75 dollars – with three read-only users and MFA. One lesson: 91 percent of my credits came from the default warehouse, not the one I set to switch off after 60 seconds. With Snowflake, settings decide the bill.
+Here’s what happened when I tried Snowflake. I loaded 1.7 million rows in one afternoon. The files shrank from 103 megabytes to just 19. My analysis ran in about one second. And the whole test cost me less than two dollars. I also made three users who can only read the data, and they must use MFA to log in. One thing I learned: most of my cost came from a default setting I didn’t change. With Snowflake, your settings decide your bill.
 
-### Slide 6 – proscons
+## Slide 6 – Pros and cons on the four criteria  (~37 sec)
 
-Pros and cons. Pricing: Snowflake is predictable with auto-suspend and quotas, but idle warehouses bill; BigQuery has a free tier and free Google Ads connector, but big scans can surprise you. Scalability: both excellent. Usability: both use SQL, but Snowflake’s roles were simpler; BigQuery means learning Google Cloud permissions. Business fit: BigQuery is native to Google Ads; Snowflake runs on any cloud and shares data easily with partners.
+Now, the pros and cons. On price, Snowflake is easy to predict if you set it up right. BigQuery is cheaper to start, but one careless query can cost a lot. On growing bigger, both are great. On ease of use, both use SQL, but I found Snowflake simpler. With BigQuery you also have to learn Google Cloud permissions. And on business fit, BigQuery works really well with Google Ads, while Snowflake works on any cloud and makes it easy to share data with partners.
 
-### Slide 7 – reviews
+## Slide 7 – What customers say: nearly tied, same worry  (~22 sec)
 
-What do customers say? On Gartner and G2 the two are nearly tied – Snowflake slightly ahead. And both have the same worry: cost control. Snowflake users say it’s easy to spend a lot if warehouses run too long. BigQuery users complain about surprise bills from big scans. So reputation won’t decide this. Our workload and our team will.
+What do real users say? The ratings are almost the same: Snowflake gets 4.7 on Gartner, BigQuery 4.5. And both groups have the same complaint – cost. Snowflake users say it’s easy to overspend. BigQuery users get surprised by big bills. So reviews won’t decide this. Our own needs will.
 
-### Slide 8 – tco
+## Slide 8 – 3-year cost: BigQuery is 11% cheaper  (~30 sec)
 
-Now pricing, for the same workload: 50 gigabytes growing 50 percent a year, hourly dashboards, three analysts. Over three years Snowflake costs about 19,900 dollars, BigQuery about 17,900 – 11 percent cheaper, thanks to its free tier and free Ads connector. But look at the bars: the platform bill is the small part. Staff time – migration, training, admin – is 77 to 89 percent. That’s the hidden cost most comparisons forget.
+Okay, the money. I priced the same job on both, over three years. Snowflake comes to about 19,900 dollars. BigQuery is about 17,900. So BigQuery is about 11 percent cheaper. But here’s the interesting part – look at the bars. The software bill is the small piece. Most of the cost is people’s time: moving the data, training, and looking after it. That’s the hidden cost people often forget.
 
-### Slide 9 – risk
+## Slide 9 – Risk test: what if the team gets careless?  (~20 sec)
 
-But cheapest isn’t the whole story. I stress-tested both. If our team gets careless – Snowflake warehouses idling ten minutes before they switch off, or BigQuery queries scanning entire tables – Snowflake’s bill goes up 2.6 times. BigQuery’s goes up 5.2 times. So BigQuery wins when everyone is disciplined, but it’s twice as sensitive to mistakes. For a small team that’s still learning, predictability matters.
+Then I asked: what if the team makes mistakes? With Snowflake, the bill could go up about 2.6 times. With BigQuery, about 5.2 times. So BigQuery is cheaper if everyone is careful, but riskier if they’re not. For a small team that’s still learning, that really matters.
 
-### Slide 10 – scoring
+## Slide 10 – The scorecard, with the rule set first  (~27 sec)
 
-To decide fairly, I set a rule before scoring anything: if the three-year cost gap is under 20 percent, cost doesn’t decide – scalability, usability and business fit do. On all four criteria, BigQuery edges ahead, 4.55 to 4.45, because it’s cheaper. But the cost gap is only 11 percent. So by our rule we look at the other three criteria – and there Snowflake wins, 3.25 to 3.05, thanks to usability.
+To keep it fair, I set a rule before I scored anything: if the cost difference is under 20 percent, cost doesn’t decide. Here the difference is only 11 percent. On all four points together, BigQuery is just slightly ahead, because it’s cheaper. But on the other three – growing bigger, ease of use and business fit – Snowflake comes out on top.
 
-### Slide 11 – recommendation
+## Slide 11 – Choose Snowflake.  (~33 sec)
 
-My recommendation: choose Snowflake. One: it’s easier for a small team – I had data, users and MFA running in one afternoon. Two: cost is more predictable – mistakes cost 2.6 times, not 5.2. Three: no lock-in, and secure sharing with our partners. The price is about 650 dollars a year more. To be fair, if we stay marketing-only and already live in Google Cloud, BigQuery would win – so we review after year one.
+So my recommendation is Snowflake. Why? First, it’s easy for a small team – I had everything working in one afternoon. Second, the cost is more predictable. Third, we’re not locked into one cloud, and we can share data safely with partners. It costs about 650 dollars more per year. And to be fair, if we only did marketing and already used Google Cloud, BigQuery would be the better pick. So let’s check again after one year.
 
-### Slide 12 – close
+## Slide 12 – Next steps  (~25 sec)
 
-Next steps: approve a phase-one budget – the three-year cost is about 20 thousand dollars, well inside 150 thousand. Move our channel reports from spreadsheets into Snowflake. And start shifting ad budget from channels that convert at 3 percent to channels that convert at 9. Better data, better decisions, more bears going home. Thanks for watching!
+So what’s next? One: approve the budget. The three-year cost is about 20 thousand dollars, well under our 150 thousand limit. Two: move our reports out of spreadsheets and into Snowflake. Three: move ad money from the channels that convert at 3 percent to the ones that convert at 9. Better data, better decisions. Thanks for watching!
