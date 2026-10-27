@@ -21,26 +21,21 @@ Target: **about 2:30** (instructions 2–3 min; rubric 1–2 min → keep it tig
 
 ### Table-overview query (worksheet A)
 ```sql
--- Show my 6 tables: how many rows and how much space each one uses
-SELECT table_name,
-       row_count,
-       ROUND(bytes / 1024 / 1024, 2) AS size_mb
+-- Show my 6 tables and how many rows each one has
+SELECT table_name, row_count
 FROM FUZZY_FACTORY_DB.INFORMATION_SCHEMA.TABLES
 WHERE table_schema = 'ECOMMERCE'
 
 UNION ALL
 
 -- Add a TOTAL line at the bottom
-SELECT 'TOTAL',
-       SUM(row_count),
-       ROUND(SUM(bytes) / 1024 / 1024, 2)
+SELECT 'TOTAL', SUM(row_count)
 FROM FUZZY_FACTORY_DB.INFORMATION_SCHEMA.TABLES
 WHERE table_schema = 'ECOMMERCE'
 
-ORDER BY CASE WHEN table_name = 'TOTAL' THEN 1 ELSE 0 END,   -- TOTAL goes last
-         row_count DESC;                                       -- biggest table first
+ORDER BY row_count;   -- smallest first, TOTAL (the biggest) ends up last
 ```
-Expected: 6 tables + TOTAL 1,735,068 rows, about 19 MB.
+Expected: PRODUCTS 4 … WEBSITE_PAGEVIEWS 1,188,124, then TOTAL 1,735,068.
 
 ### ACCESS SQL (worksheet C)
 ```sql
@@ -86,10 +81,10 @@ ALTER USER DEMO_VIEWER SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQU
 **Show:**
 1. Worksheet **B**: RAW_STAGE with the 6 files.
 2. Worksheet **A**: highlight the `COPY INTO` lines.
-3. Run the **table-overview query** → 6 tables + TOTAL 1,735,068 rows, ~19 MB.
+3. Run the **table-overview query** → 6 tables + TOTAL 1,735,068 rows.
 
 **Say:**
-> Here are my six files in the stage. And here’s the COPY INTO command that loaded them. Let’s check it worked. This shows all six tables – 1.7 million rows, only 19 megabytes. Everything is there.
+> Here are my six files in the stage. And here’s the COPY INTO command that loaded them. Let’s check it worked. Here are all six tables – 1.7 million rows in total. Everything is there.
 
 ### Part 4 · SLIDE 3 – “Snowflake is like an office building” (0:55–1:10)
 **Show:** Slide 3 – point at each card from left to right.
