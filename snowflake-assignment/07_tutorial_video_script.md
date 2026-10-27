@@ -100,6 +100,18 @@ ALTER USER DEMO_VIEWER SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQU
 | 3 | STEP 3 lines | “Step three: give the role to the user – and turn on MFA.” |
 
 ### Part 6 · SNOWFLAKE – test as the new user (1:45–2:25)
+**Test SQL** (paste into a new SQL file as the new user; run each test separately with ▶, not Run All):
+```sql
+-- TEST 1: Can the new user READ the data?
+-- Expected: 32313  ✓
+SELECT COUNT(*) AS orders
+FROM FUZZY_FACTORY_DB.ECOMMERCE.ORDERS;
+
+-- TEST 2: Can the new user DELETE data?
+-- Expected: error "Insufficient privileges"  (this is GOOD – it proves read-only)
+DELETE FROM FUZZY_FACTORY_DB.ECOMMERCE.PRODUCTS;
+```
+
 **Show and say:**
 
 | Do | Say |
