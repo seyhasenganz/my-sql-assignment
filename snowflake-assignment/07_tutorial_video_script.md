@@ -21,19 +21,18 @@ Target: **about 2:30** (instructions 2–3 min; rubric 1–2 min → keep it tig
 
 ### Table-overview query (worksheet A)
 ```sql
--- Show my 6 tables and how many rows each one has
-SELECT table_name, row_count
-FROM FUZZY_FACTORY_DB.INFORMATION_SCHEMA.TABLES
-WHERE table_schema = 'ECOMMERCE'
-
+WITH counts AS (
+              SELECT 'PRODUCTS' AS table_name, COUNT(*) AS row_count FROM FUZZY_FACTORY_DB.ECOMMERCE.PRODUCTS
+    UNION ALL SELECT 'WEBSITE_SESSIONS',   COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.WEBSITE_SESSIONS
+    UNION ALL SELECT 'WEBSITE_PAGEVIEWS',  COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.WEBSITE_PAGEVIEWS
+    UNION ALL SELECT 'ORDERS',             COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.ORDERS
+    UNION ALL SELECT 'ORDER_ITEMS',        COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.ORDER_ITEMS
+    UNION ALL SELECT 'ORDER_ITEM_REFUNDS', COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.ORDER_ITEM_REFUNDS
+)
+SELECT table_name, row_count FROM counts
 UNION ALL
-
--- Add a TOTAL line at the bottom
-SELECT 'TOTAL', SUM(row_count)
-FROM FUZZY_FACTORY_DB.INFORMATION_SCHEMA.TABLES
-WHERE table_schema = 'ECOMMERCE'
-
-ORDER BY row_count;   -- smallest first, TOTAL (the biggest) ends up last
+SELECT 'TOTAL', SUM(row_count) FROM counts
+ORDER BY row_count;
 ```
 Expected: PRODUCTS 4 … WEBSITE_PAGEVIEWS 1,188,124, then TOTAL 1,735,068.
 
