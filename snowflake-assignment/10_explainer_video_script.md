@@ -41,7 +41,7 @@ But what if someone makes a mistake? I tested that too. With Snowflake, a mistak
 
 ## Slide 10 – The scorecard, with the rule set first
 
-So I scored both on the four points. BigQuery wins on price. Snowflake wins on ease of use. They tie on scalability and business fit. Because the price difference is small – about 11 percent – I let the other points decide. And there, Snowflake is ahead.
+So I scored both on the four points. BigQuery wins on price. Snowflake wins on ease of use. They tie on the other two. The price difference is small – only about 650 dollars a year – so I decided ease of use matters more. That makes Snowflake the winner.
 
 ## Slide 11 – Choose Snowflake.  ← Step 6 part 4: clear recommendation
 
