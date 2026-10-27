@@ -13,7 +13,7 @@ Quick background. If you haven’t heard of it, Build-A-Bear is the store where 
 
 ## Slide 3 – What the data shows: one channel carries the business
 
-So I tried a test. I loaded a public data set from an online teddy bear shop into Snowflake. Then I asked: which marketing brings in the most money? One Google ad channel brings in more than half of all sales. That’s risky. Some channels turn 9 out of 100 visitors into buyers. Paid social? Only 3. This is exactly the kind of answer our team needs every day.
+So I tried a test. I loaded a public data set from an online teddy bear shop into Snowflake. Then I asked: where do our customers come from? I found that more than half of all sales come from just one place – Google ads. That’s risky: if those ads get expensive, we’re in trouble. I also found that not all ads work the same. People who search for our name often buy. People who click on social media ads usually don’t. So some of our ad money is wasted. Snowflake helps us see this quickly.
 
 ## Slide 4 – Two contenders, two ways to bill you  ← Step 6 part 1: purpose of each product
 
