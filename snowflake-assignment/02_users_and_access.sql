@@ -82,6 +82,18 @@ GRANT ROLE FUZZY_READER TO USER LESCAMILLA;
 GRANT ROLE FUZZY_READER TO USER ECALICIBETE;
 
 -- ---------------------------------------------------------------------
+-- 3b. MFA: require enrolment at the next login (password-only is not allowed)
+--     Each person enrols on their own phone the first time they log in.
+-- ---------------------------------------------------------------------
+CREATE AUTHENTICATION POLICY IF NOT EXISTS FUZZY_FACTORY_DB.ECOMMERCE.REQUIRE_MFA
+  MFA_ENROLLMENT = 'REQUIRED'
+  COMMENT = 'Users must enrol in MFA at first login';
+
+ALTER USER EXT_TEST_USER SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQUIRE_MFA;
+ALTER USER LESCAMILLA    SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQUIRE_MFA;
+ALTER USER ECALICIBETE   SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQUIRE_MFA;
+
+-- ---------------------------------------------------------------------
 -- 4. Verify (screenshot these for the document / video)
 -- ---------------------------------------------------------------------
 SHOW GRANTS TO ROLE FUZZY_READER;

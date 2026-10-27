@@ -34,8 +34,9 @@ CREATE USER DEMO_VIEWER
   DEFAULT_NAMESPACE = 'FUZZY_FACTORY_DB.ECOMMERCE'
   MUST_CHANGE_PASSWORD = FALSE;
 
--- Step 3: give the role to the user
+-- Step 3: give the role to the user and require MFA
 GRANT ROLE FUZZY_READER TO USER DEMO_VIEWER;
+ALTER USER DEMO_VIEWER SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQUIRE_MFA;
 ```
 (The role and grants already exist – re-running them is harmless and shows the steps on camera.)
 
@@ -49,7 +50,7 @@ GRANT ROLE FUZZY_READER TO USER DEMO_VIEWER;
 | 0:15–0:30 | Database Explorer: FUZZY_FACTORY_DB → ECOMMERCE → 6 tables | "Here's my data: an online toy store with 1.7 million rows across six tables – website sessions, orders and refunds." |
 | 0:30–0:55 | Highlight Step 1 lines, run them | "Snowflake never gives permissions directly to people. You give them to a **role**, then give the role to people. My role, FUZZY_READER, may use one small warehouse to run queries, see this database and schema, and only **SELECT** from the tables – no changes allowed." |
 | 0:55–1:15 | Highlight Step 2, run it | "Now the user. TYPE equals PERSON tells Snowflake this is a human – so multi-factor authentication will be required. I set a default role, warehouse and schema so the user lands in the right place." |
-| 1:15–1:25 | Highlight Step 3, run it | "Last step: grant the role to the user. That's it – three steps." |
+| 1:15–1:25 | Highlight Step 3, run it | "Last step: grant the role to the user, and attach an authentication policy that makes MFA enrolment required. That's it – three steps." |
 | 1:25–1:45 | Incognito window: log in as DEMO_VIEWER → MFA setup → scan QR → enter code | "Let's test it as the new user. Because Snowflake no longer allows password-only sign-in, the user must enrol in MFA on the first login – I scan this QR code with my authenticator app and enter the code." |
 | 1:45–1:55 | Run `SELECT COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.ORDERS;` → 32,313 | "The user can query the data – 32,313 orders." |
 | 1:55–2:05 | Run `DELETE FROM FUZZY_FACTORY_DB.ECOMMERCE.PRODUCTS;` → insufficient privileges | "But if they try to delete anything – access denied. Read-only, exactly as designed." |
