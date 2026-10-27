@@ -109,10 +109,10 @@ ALTER USER DEMO_VIEWER SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQU
 | New SQL file → run `SELECT COUNT(*) FROM FUZZY_FACTORY_DB.ECOMMERCE.ORDERS;` → **32,313** | “Can they read the data? Yes – 32,313 orders.” |
 | Run `DELETE FROM FUZZY_FACTORY_DB.ECOMMERCE.PRODUCTS;` → **Insufficient privileges** | “Can they delete something? Access denied. Read only, exactly as planned.” |
 
-### Part 7 · SLIDE 4 – “Recap: safe sharing in 4 moves” (2:25–2:35)
-**Show:** Slide 4.
+### Part 7 · SLIDE 4 – “Recap: what we proved” (2:25–2:40)
+**Show:** Slide 4 – point at the blue box (✓ Can read), then the orange box (🔒 Can’t delete).
 **Say:**
-> So, the user can read the data, but can’t delete anything. I did the same for my test user and both instructors. Load the data, create a role, create a user, connect them, and add MFA. Thanks for watching!
+> Let’s recap what we proved. The new user can read the data – 32,313 orders came back. But they can’t delete anything – Snowflake said “Insufficient privileges.” That’s exactly what we want: safe, read-only access. I did the same for my test user and both instructors. Load the data, create a role, create a user, connect them, and add MFA. Thanks for watching!
 
 ---
 
