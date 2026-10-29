@@ -1,4 +1,4 @@
-# Tutorial Video Script – "Snowflake for Beginners: Load Data and Share It Safely"
+# Tutorial Video Script – "Snowflake for Beginners: Load Data and Choose Who Can See It"
 
 Slides: https://claude.ai/artifact/TjcNk3FwiaWq9xkzJcA4Ak (4 slides; speaker notes match this script)
 Target: **about 2:30** (instructions 2–3 min; rubric 1–2 min → keep it tight). Slides ≈ 35 s, live Snowflake demo ≈ 2 min.
@@ -66,7 +66,7 @@ ALTER USER DEMO_VIEWER SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQU
 
 ## The script – follow the slides
 
-### Part 1 · SLIDE 1 – “Load your data. Share it safely.” (0:00–0:10)
+### Part 1 · SLIDE 1 – “Load your data. Choose who can see it.” (0:00–0:10)
 **Show:** Slide 1.
 **Say:**
 > Want to put your data in the cloud and let someone look at it – without letting them change anything? Let me show you how in Snowflake, step by step.
@@ -136,6 +136,6 @@ DELETE FROM FUZZY_FACTORY_DB.ECOMMERCE.PRODUCTS;
 
 ## After recording
 1. Watch it once – voice clear, code readable, about 2:30.
-2. Upload to **YouTube → Unlisted** (not Private). Title: *“Snowflake for Beginners: Load Data and Share It Safely (Users, Roles & MFA)”*.
+2. Upload to **YouTube → Unlisted** (not Private). Title: *“Snowflake for Beginners: Load Data and Choose Who Can See It (Users, Roles & MFA)”*.
 3. Captions start automatically – check later in YouTube Studio → Subtitles.
 4. Optional cleanup after upload: `DROP USER DEMO_VIEWER;` (keep EXT_TEST_USER and the instructor users!).
