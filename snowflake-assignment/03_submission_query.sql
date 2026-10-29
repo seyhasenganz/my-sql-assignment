@@ -42,7 +42,7 @@ SELECT
     ROUND(COUNT(o.order_id) * 100.0 / COUNT(v.website_session_id), 2)   AS conversion_rate_pct,
     ROUND(SUM(o.price_usd), 0)                                          AS revenue_usd,
     ROUND(SUM(o.price_usd) / COUNT(v.website_session_id), 2)            AS revenue_per_session_usd,
-    ROUND(SUM(o.price_usd - o.cogs_usd - IFNULL(r.refund_usd, 0)), 0)   AS net_margin_usd,  -- price minus cost minus refunds
+    ROUND(SUM(o.price_usd - o.cogs_usd - IFNULL(r.refund_usd, 0)), 0)   AS net_margin_usd,  -- price - cost - refunds
     ROUND(SUM(o.price_usd) * 100.0 / (SELECT SUM(price_usd) FROM orders), 1) AS share_of_revenue_pct
 FROM visits v
 LEFT JOIN orders  o ON o.website_session_id = v.website_session_id   -- left join so visits with no order still count
