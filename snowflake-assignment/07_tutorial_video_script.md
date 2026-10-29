@@ -88,7 +88,7 @@ ALTER USER DEMO_VIEWER SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQU
 ### Part 4 · SLIDE 3 – “Giving someone access: 3 steps” (0:55–1:10)
 **Show:** Slide 3 – point at cards 1, 2, 3, then the MFA line.
 **Say:**
-> Now, who can see this data? Giving someone access takes three steps. One: create a role – that’s what the person is allowed to do. Mine can only read my tables. Two: create the user – that’s the person. Three: connect them – give the role to the user. And with MFA, they need their password and a code from their phone to log in.
+> Now, who can see this data? Giving someone access takes three steps. One: create a role – that’s what the person is allowed to do. The role I made only lets people read my tables, not change them. Two: create the user – that’s the person. Three: connect them – give the role to the user. And with MFA, they need their password and a code from their phone to log in.
 
 ### Part 5 · SNOWFLAKE – the three steps (1:10–1:45)
 **Show:** Worksheet **C**. Highlight each step, then click **Run**.
