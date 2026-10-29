@@ -74,7 +74,7 @@ ALTER USER DEMO_VIEWER SET AUTHENTICATION POLICY FUZZY_FACTORY_DB.ECOMMERCE.REQU
 ### Part 2 · SLIDE 2 – “My data: an online toy store” (0:10–0:30)
 **Show:** Slide 2 – point at the table, then at the three boxes on the right.
 **Say:**
-> Here’s my data: an online toy store. Six tables, 1.7 million rows – website visits, orders and refunds. In Snowflake it takes only 19 megabytes. How did it get in? Two simple moves. First, I uploaded my six CSV files into a stage – think of it as a waiting room for files. Then one command, COPY INTO, moves each file into its table.
+> Here’s my data. It’s a free public dataset from Maven Analytics, called Maven Fuzzy Factory – an online store that sells teddy bears, with three years of website visits, orders and refunds. Six tables, 1.7 million rows. In Snowflake it takes only 19 megabytes. How did it get in? Two simple moves. First, I uploaded my six CSV files into a stage – think of it as a waiting room for files. Then one command, COPY INTO, moves each file into its table.
 
 ### Part 3 · SNOWFLAKE – show the loading (0:30–0:55)
 **Show:**
